@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>경마 게임</title>
+<style>
+  body { font-family: '나눔고딕', sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+  .hidden { display: none; }
+  .horse-track { font-family: monospace; margin: 10px 0; }
+  button { padding: 8px 12px; margin-top: 10px; cursor: pointer; }
+  input, select { margin: 5px 0; width: 100%; padding: 6px; box-sizing: border-box;}
+  #resultText p { margin: 5px 0; }
+</style>
+</head>
+<body>
+
+<h1>🏇 경마 게임 🏇</h1>
+
+<div id="setup">
+  <h2>1. 플레이어 설정</h2>
+  <label>플레이어 수 (1~5): <input type="number" id="playerCount" min="1" max="5" value="2" /></label>
+  <div id="playerNames"></div>
+  <button id="setPlayersBtn">플레이어 설정 완료</button>
+
+  <h2>2. 말 설정</h2>
+  <label>말 수 (2~7): <input type="number" id="horseCount" min="2" max="7" value="3" /></label>
+  <div id="horseNames"></div>
+  <button id="setHorsesBtn">말 설정 완료</button>
+</div>
+
+<div id="betting" class="hidden">
+  <h2>3. 베팅</h2>
+  <label>배팅 배율 (승리 시 몇 배): <input type="number" id="betMultiplier" min="1" step="0.1" value="2" /></label>
+  <div id="betInputs"></div>
+  <button id="startRaceBtn">경주 시작</button>
+</div>
+
+<div id="race" class="hidden">
+  <h2>4. 경주 중</h2>
+  <div id="raceTrack" style="white-space: pre;"></div>
+</div>
+
+<div id="result" class="hidden">
+  <h2>🏁 결과 🏁</h2>
+  <div id="resultText"></div>
+  <button id="playAgainBtn">다시 하기</button>
+</div>
+
+<script>
+  let players = [];
+  let horses = [];
+  let playerChips = {};
+  const initialChips = 1000;
+
+  const playerCountInput = document.getElementById('playerCount');
+  const playerNamesDiv = document.getElementById('playerNames');
+  const horseCountInput = document.getElementById('horseCount');
+  const horseNamesDiv = document.getElementById('horseNames');
+
+  function createPlayerNameInputs() {
+    playerNamesDiv.innerHTML = '';
+    const count = +playerCountInput.value;
+    for(let i=0; i<count; i++) {
+      const input = document.createElement('input');
+      input.placeholder = `플레이어 ${i+1} 이름`;
+      input.required = true;
+      playerNamesDiv.appendChild(input);
+      playerNamesDiv.appendChild(document.createElement('br'));
+    }
+  }
+  playerCountInput.addEventListener('input', createPlayerNameInputs);
+  createPlayerNameInputs();
+
+  function createHorseNameInputs() {
+    horseNamesDiv.innerHTML = '';
+    const count = +horseCountInput.value;
+    for(let i=0; i<count; i++) {
+      const input = document.createElement('input');
+      input.placeholder = `말 ${i+1} 이름`;
+      input.required = true;
+      horseNamesDiv.appendChild(input);
+      horseNamesDiv.appendChild(document.createElement('br'));
+    }
+  }
+  horseCountInput.addEventListener('input', createHorseNameInputs);
+  createHorseNameInputs();
+
+  document.getElementById('setPlayersBtn').onclick = () => {
+    const inputs = playerNamesDiv.querySelectorAll('input');
+    players = [];
+    playerChips = {};
+    for(const input of inputs) {
+      const name = input.value.trim();
+      if(!name) {
+        alert('플레이어 이름을 모두 입력하세요.');
+        return;
+      }
+      if(players.includes(name)) {
+        alert('플레이어 이름이 중복되었습니다.');
+        return;
+      }
+      players.push(name);
+      playerChips[name] = initialChips;
+    }
+    alert('플레이어 설정 완료! 다음에 말을 설정하세요.');
+  };
+
+  document.getElementById('setHorsesBtn').onclick = () => {
+    const inputs = horseNamesDiv.querySelectorAll('input');
+    horses = [];
+    for(const input of inputs) {
+      const name = input.value.trim();
+      if(!name) {
+        alert('말 이름을 모두 입력하세요.');
+        return;
+      }
+      if(horses.includes(name)) {
+        alert('말 이름이 중복되었습니다.');
+        return;
+      }
+      horses.push(name);
+    }
+    if(players.length === 0) {
+      alert('먼저 플레이어를 설정하세요.');
+      return;
+    }
+    alert('말 설정 완료! 이제 베팅을 시작하세요.');
+
+    setupBetting();
+  };
+
+  const bettingDiv = document.getElementById('betting');
+  const betInputsDiv = document.getElementById('betInputs');
+  const betMultiplierInput = document.getElementById('betMultiplier');
+  function setupBetting() {
+    document.getElementById('setup').classList.add('hidden');
+    bettingDiv.classList.remove('hidden');
+    betInputsDiv.innerHTML = '';
+    for(const player of players) {
+      const pDiv = document.createElement('div');
+      pDiv.style.marginBottom = '10px';
+      pDiv.innerHTML = `<strong>${player} (칩: ${playerChips[player]})</strong><br>`;
+
+      const select = document.createElement('select');
+      for(const horse of horses) {
+        const option = document.createElement('option');
+        option.value = horse;
+        option.textContent = horse;
+        select.appendChild(option);
+      }
+      pDiv.appendChild(select);
+
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.min = 1;
+      input.max = playerChips[player];
+      input.placeholder = '베팅 칩 수';
+      input.style.width = '100px';
+      pDiv.appendChild(input);
+
+      betInputsDiv.appendChild(pDiv);
+    }
+  }
+
+  const raceDiv = document.getElementById('race');
+  const raceTrackDiv = document.getElementById('raceTrack');
+  const resultDiv = document.getElementById('result');
+  const resultTextDiv = document.getElementById('resultText');
+
+  document.getElementById('startRaceBtn').onclick = () => {
+    const selects = betInputsDiv.querySelectorAll('select');
+    const inputs = betInputsDiv.querySelectorAll('input[type=number]');
+
+    const bets = {};
+    for(let i=0; i<players.length; i++) {
+      const player = players[i];
+      const horse = selects[i].value;
+      const amount = Number(inputs[i].value);
+      if (!amount || amount < 1 || amount > playerChips[player]) {
+        alert(`${player}님, 올바른 베팅 금액을 입력하세요.`);
+        return;
+      }
+      bets[player] = {horse, amount};
+    }
+
+    const multiplier = Number(betMultiplierInput.value);
+    if(!multiplier || multiplier < 1) {
+      alert('배팅 배율은 1 이상의 숫자로 입력하세요.');
+      return;
+    }
+
+    bettingDiv.classList.add('hidden');
+    raceDiv.classList.remove('hidden');
+    raceTrackDiv.innerHTML = '';
+
+    runRace(bets, multiplier);
+  };
+
+  function runRace(bets, multiplier) {
+    const positions = {};
+    const finishLine = 30;
+    horses.forEach(h => positions[h] = 0);
+
+    raceTrackDiv.innerHTML = '';
+
+    const interval = setInterval(() => {
+      raceTrackDiv.innerHTML = '';
+      let winner = null;
+      horses.forEach(horse => {
+        positions[horse] += Math.floor(Math.random()*4);
+        if(positions[horse] >= finishLine && !winner) {
+          winner = horse;
+        }
+
+        let track = '-'.repeat(positions[horse]) + '🏇' + '-'.repeat(finishLine - positions[horse]);
+        const p = document.createElement('pre');
+        p.className = 'horse-track';
+        p.textContent = `${horse}: ${track}`;
+        raceTrackDiv.appendChild(p);
+      });
+
+      if(winner) {
+        clearInterval(interval);
+        showResult(winner, bets, multiplier);
+      }
+    }, 300);
+  }
+
+  function showResult(winner, bets, multiplier) {
+    raceDiv.classList.add('hidden');
+    resultDiv.classList.remove('hidden');
+
+    let text = `<p>우승 말: <strong>${winner}</strong></p><hr>`;
+    for(const player of players) {
+      const bet = bets[player];
+      if(bet.horse === winner) {
+        const winAmount = Math.floor(bet.amount * multiplier);
+        playerChips[player] += winAmount;
+        text += `<p>${player}님: 승리! +${winAmount} 칩 (현재 칩: ${playerChips[player]})</p>`;
+      } else {
+        playerChips[player] -= bet.amount;
+        text += `<p>${player}님: 패배 -${bet.amount} 칩 (현재 칩: ${playerChips[player]})</p>`;
+      }
+    }
+    resultTextDiv.innerHTML = text;
+  }
+
+  document.getElementById('playAgainBtn').onclick = () => {
+    if(players.length === 0 || horses.length === 0) {
+      alert('플레이어 또는 말이 설정되지 않았습니다.');
+      return;
+    }
+    setupBetting();
+    resultDiv.classList.add('hidden');
+    bettingDiv.classList.remove('hidden');
+  };
+</script>
+
+</body>
+</html>
+

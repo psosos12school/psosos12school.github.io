@@ -7,162 +7,111 @@
     canvas { background: #222; display: block; margin: 0 auto; }
     body { text-align: center; font-family: sans-serif; color: #fff; background: #333;}
     h2 { margin-top: 20px;}
-    #score, #gameover { margin: 12px 0; }
-    button { font-size: 20px; padding: 8px 24px; background: #409; color: #fff; border:none; border-radius:8px; cursor:pointer;}
   </style>
 </head>
 <body>
   <h2>개고기 피하기 공장</h2>
   <canvas id="game" width="400" height="600"></canvas>
   <div id="score"></div>
-  <div id="gameover"></div>
   <script>
-    // 이미지 로딩
-    const dogeImg = new Image();
-    dogeImg.src = "도지.png";
-
-    const rocketImg = new Image();
-    rocketImg.src = "개고기로켓.png";
-
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
-    // 플레이어 상태
+    // 이미지 객체 생성
+    const dogeImg = new Image();
+    dogeImg.src = "도지.png";
+    const rocketImg = new Image();
+    rocketImg.src = "개고기로켓.png";
+
+    // 플레이어
     const player = {
-      x: canvas.width/2-30,
-      y: canvas.height-80,
+      x: canvas.width / 2 - 30,
+      y: canvas.height - 60,
       w: 60,
-      h: 60,
-      speed: 0,
-      maxSpeed: 8,
-      accel: 0.5,
-      friction: 0.1,
-      movingLeft: false,
-      movingRight: false
+      h: 45,
+      speed: 7
     };
 
     // 장애물 배열
     let obstacles = [];
-
     let score = 0;
-    let startTime = null;
     let gameOver = false;
 
-    // 장애물 생성 간격(프레임): 시간이 지날수록 점점 줄어듦
-    function getObstacleInterval(sec) {
-      return Math.max(18, 50 - Math.floor(sec*1.7)); // 최소 간격 18프레임
+    function randomX() {
+      return Math.floor(Math.random() * (canvas.width - 30));
     }
-
-    // 장애물 생성
     function makeObstacle() {
       obstacles.push({
-        x: Math.random() * (canvas.width - 44),
-        y: -44,
-        w: 44,
-        h: 44,
-        speed: 5 + Math.random()*2
+        x: randomX(),
+        y: -45,
+        w: 45,
+        h: 45,
+        speed: 6 + Math.random() * 4
       });
     }
 
-    // 부드러운 이동
-    function updatePlayer() {
-      if(player.movingLeft) player.speed -= player.accel;
-      if(player.movingRight) player.speed += player.accel;
-      if(!player.movingLeft && !player.movingRight) {
-        // 마찰로 서서히 멈춤
-        if(player.speed > 0) player.speed = Math.max(0, player.speed - player.friction);
-        else if(player.speed < 0) player.speed = Math.min(0, player.speed + player.friction);
-      }
-      player.speed = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.speed));
-      player.x += player.speed;
-
-      if(player.x < 0) { player.x = 0; player.speed = 0; }
-      if(player.x + player.w > canvas.width) { player.x = canvas.width - player.w; player.speed = 0; }
-    }
-
+    let tick = 0;
     function draw() {
-      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 장애물(개고기로켓.png)
+      // 플레이어 그림(도지.png)
+      ctx.drawImage(dogeImg, player.x, player.y, player.w, player.h);
+
+      // 장애물 그림(개고기로켓.png)
       obstacles.forEach(ob => {
         ctx.drawImage(rocketImg, ob.x, ob.y, ob.w, ob.h);
       });
 
-      // 플레이어(도지.png)
-      ctx.drawImage(dogeImg, player.x, player.y, player.w, player.h);
-
+      // 점수 표시
       ctx.fillStyle = "#fff";
       ctx.font = "bold 25px sans-serif";
       ctx.fillText(`점수: ${score}`, 10, 35);
     }
 
-    let tick = 0;
     function update() {
-      if(gameOver) return;
+      if (gameOver) return;
 
-      // 경과 시간 계산
-      const now = Date.now();
-      if(!startTime) startTime = now;
-      let sec = Math.floor((now - startTime)/1000);
+      tick++;
+      if (tick % 30 === 0) makeObstacle();
 
-      // 장애물 생성 빈도 자동 조절
-      if(tick % getObstacleInterval(sec) === 0) makeObstacle();
-
-      // 플레이어 업데이트
-      updatePlayer();
-
-      // 장애물 이동 및 충돌체크
+      // 장애물 이동 및 충돌 체크
       obstacles.forEach((ob, idx) => {
-        ob.y += ob.speed + sec*0.05;  // 점점 빨라짐
-
-        if(ob.y > canvas.height) {
+        ob.y += ob.speed;
+        if (ob.y > canvas.height) {
           obstacles.splice(idx, 1);
           score++;
-        } else if(
+        }
+        // 충돌
+        if (
           ob.x < player.x + player.w &&
           ob.x + ob.w > player.x &&
           ob.y < player.y + player.h &&
           ob.y + ob.h > player.y
         ) {
           gameOver = true;
-          document.getElementById('gameover').innerHTML =
-            `<h1>게임 오버! 점수: ${score}</h1><button onclick="window.location.reload()">다시하기</button>`;
+          document.getElementById('score').innerHTML = `<h1>게임 오버! 점수: ${score}</h1><button onclick="window.location.reload()">다시하기</button>`;
         }
       });
-
-      tick++;
-      document.getElementById('score').innerText = `최고기록 : ${score}`;
     }
 
     function gameLoop() {
       update();
       draw();
-      if(!gameOver) requestAnimationFrame(gameLoop);
+      if (!gameOver) requestAnimationFrame(gameLoop);
     }
 
-    // 키 이벤트: 누르고 있으면 계속 움직임
+    // 키보드 입력
     window.addEventListener("keydown", function(e){
-      if(e.code === "ArrowLeft") player.movingLeft = true;
-      if(e.code === "ArrowRight") player.movingRight = true;
-    });
-    window.addEventListener("keyup", function(e){
-      if(e.code === "ArrowLeft") player.movingLeft = false;
-      if(e.code === "ArrowRight") player.movingRight = false;
+      if(e.key === "ArrowLeft" && player.x > 0) player.x -= player.speed;
+      if(e.key === "ArrowRight" && player.x + player.w < canvas.width) player.x += player.speed;
     });
 
-    // 이미지가 다 로딩되면 시작
-    let loadCount = 0;
-    [dogeImg, rocketImg].forEach(img=>{
-      img.onload = () => {
-        loadCount++;
-        if(loadCount===2) gameLoop();
-      }
-    });
-
-  </script>
-</body>
-</html>
-    gameLoop();
+    // 이미지가 모두 로딩된 뒤 게임 시작
+    let imagesLoaded = 0;
+    dogeImg.onload = rocketImg.onload = function () {
+      imagesLoaded++;
+      if (imagesLoaded === 2) gameLoop();
+    };
   </script>
 </body>
 </html>

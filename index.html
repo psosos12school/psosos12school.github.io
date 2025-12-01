@@ -18,12 +18,16 @@
   <canvas id="game" width="400" height="600"></canvas>
   <div id="score"></div>
   <div id="gameover"></div>
+  <!-- 사운드 추가 -->
+  <audio id="theworld-audio" src="더월드.mp3"></audio>
   <script>
     // 이미지 로딩
     const dogeImg = new Image();
     dogeImg.src = "도지.png";
     const rocketImg = new Image();
     rocketImg.src = "개고기로켓.png";
+    // 사운드 객체
+    const theWorldAudio = document.getElementById('theworld-audio');
 
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
@@ -43,22 +47,23 @@
       hitbox: { xOffset: 8, yOffset: 8, w: 44, h: 44 }
     };
 
-    // 궁극기 상태
-    let ultiReady = true; // 준비되면 true
-    let ultiCool = 50000; // === 50초 쿨타임 (ms)
-    let ultiDuration = 2000; // 궁극기 지속(ms)
+    // 궁극기(더 월드) 상태
+    let ultiReady = true;
+    let ultiCool = 50000; // 50초
+    let ultiDuration = 2000;
     let ultiActive = false;
     let ultiLast = 0;
 
-    // 장애물 배열
-    let obstacles = [];
+    // 궁극기 사운드 재생 체크
+    let soundPlayed = false;
 
+    let obstacles = [];
     let score = 0;
     let startTime = null;
     let gameOver = false;
 
     function getObstacleInterval(sec) {
-      return Math.max(18, 50 - Math.floor(sec * 1.7)); // 최소 간격 18프레임
+      return Math.max(18, 50 - Math.floor(sec * 1.7));
     }
     function makeObstacle() {
       obstacles.push({
@@ -87,23 +92,16 @@
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // 장애물(개고기로켓.png)
       obstacles.forEach(ob => {
         ctx.drawImage(rocketImg, ob.x, ob.y, ob.w, ob.h);
-        // 히트박스 디버그 박스
-        // ctx.strokeStyle="#0ff"; ctx.strokeRect(ob.x+ob.hitbox.xOffset, ob.y+ob.hitbox.yOffset, ob.hitbox.w, ob.hitbox.h);
       });
-
-      // 플레이어(도지.png)
       ctx.drawImage(dogeImg, player.x, player.y, player.w, player.h);
-      // ctx.strokeStyle="#ff0"; ctx.strokeRect(player.x+player.hitbox.xOffset, player.y+player.hitbox.yOffset, player.hitbox.w, player.hitbox.h);
 
       ctx.fillStyle = "#fff";
       ctx.font = "bold 25px sans-serif";
       ctx.fillText(`점수: ${score}`, 10, 35);
 
-      // 궁극기 표시
+      // 궁극기 표시 (더 월드)
       if (ultiActive) {
         ctx.save();
         ctx.globalAlpha = 0.2;
@@ -111,7 +109,7 @@
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.restore();
         ctx.font = "bold 35px sans-serif";
-        ctx.fillText("시간 멈춤!!", 120, 310);
+        ctx.fillText("더 월드!", 135, 310);
       }
     }
 
@@ -123,15 +121,11 @@
       if (!startTime) startTime = now;
       let sec = Math.floor((now - startTime) / 1000);
 
-      // 장애물 생성 빈도 자동 조절 (궁극기 중엔 안 생김)
       if (!ultiActive && tick % getObstacleInterval(sec) === 0) makeObstacle();
-
-      // 플레이어 업데이트
       updatePlayer();
 
-      // 장애물 이동 및 충돌체크
       obstacles.forEach((ob, idx) => {
-        if (!ultiActive) ob.y += ob.speed + sec * 0.05; // 궁극기 중엔 멈춤!
+        if (!ultiActive) ob.y += ob.speed + sec * 0.05;
         if (ob.y > canvas.height) {
           obstacles.splice(idx, 1);
           score++;
@@ -139,8 +133,7 @@
           // 히트박스 기준 충돌판정
           let obx = ob.x + ob.hitbox.xOffset, oby = ob.y + ob.hitbox.yOffset, obw = ob.hitbox.w, obh = ob.hitbox.h;
           let plx = player.x + player.hitbox.xOffset, ply = player.y + player.hitbox.yOffset, plw = player.hitbox.w, plh = player.hitbox.h;
-          if (obx < plx + plw && obx + obw > plx &&
-            oby < ply + plh && oby + obh > ply) {
+          if (obx < plx + plw && obx + obw > plx && oby < ply + plh && oby + obh > ply) {
             gameOver = true;
             document.getElementById('gameover').innerHTML =
               `<h1>게임 오버! 점수: ${score}</h1><button onclick="window.location.reload()">다시하기</button>`;
@@ -149,20 +142,26 @@
       });
 
       // 궁극기 쿨/상태 표시
+      if (ultiActive && !soundPlayed) {
+        theWorldAudio.currentTime = 0;
+        theWorldAudio.play();
+        soundPlayed = true;
+      }
       if (ultiActive && now - ultiLast > ultiDuration) {
         ultiActive = false;
         ultiReady = false;
         ultiLast = now;
+        soundPlayed = false;
       }
       if (!ultiActive && !ultiReady && now - ultiLast > ultiCool) {
         ultiReady = true;
       }
       document.getElementById('ulti').innerHTML =
         ultiActive
-          ? "<b>궁극기 가동중!!</b>"
+          ? "<b>더 월드 가동중!!</b>"
           : ultiReady
-            ? "F를 눌러 궁극기 [시간멈춤] 사용 가능!"
-            : `궁극기 충전중... (${Math.ceil((ultiCool - (now-ultiLast))/1000)}초)`;
+            ? "F를 눌러 궁극기 [더 월드] 사용 가능!"
+            : `더 월드 충전중... (${Math.ceil((ultiCool - (now-ultiLast))/1000)}초)`;
 
       tick++;
       document.getElementById('score').innerText = `최고기록 : ${score}`;
@@ -181,6 +180,7 @@
       if(e.code === "KeyF" && ultiReady && !ultiActive) {
         ultiActive = true;
         ultiLast = Date.now();
+        soundPlayed = false; // 사운드 재생 트리거
       }
     });
     window.addEventListener("keyup", function(e){

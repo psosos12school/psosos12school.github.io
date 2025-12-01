@@ -7,91 +7,165 @@
     canvas { background: #222; display: block; margin: 0 auto; }
     body { text-align: center; font-family: sans-serif; color: #fff; background: #333;}
     h2 { margin-top: 20px;}
+    #score, #gameover { margin: 12px 0; }
+    #ulti { margin-bottom: 10px; font-size: 18px;}
+    button { font-size: 20px; padding: 8px 24px; background: #409; color: #fff; border:none; border-radius:8px; cursor:pointer;}
   </style>
 </head>
 <body>
   <h2>개고기 피하기 공장</h2>
+  <div id="ulti"></div>
   <canvas id="game" width="400" height="600"></canvas>
   <div id="score"></div>
+  <div id="gameover"></div>
   <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-
-    // 이미지 객체 생성
+    // 이미지 로딩
     const dogeImg = new Image();
     dogeImg.src = "도지.png";
     const rocketImg = new Image();
     rocketImg.src = "개고기로켓.png";
 
-    // 플레이어
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    // 플레이어 상태
     const player = {
-      x: canvas.width / 2 - 30,
-      y: canvas.height - 60,
+      x: canvas.width/2-30,
+      y: canvas.height-80,
       w: 60,
-      h: 45,
-      speed: 7
+      h: 60,
+      speed: 0,
+      maxSpeed: 8,
+      accel: 0.5,
+      friction: 0.1,
+      movingLeft: false,
+      movingRight: false,
+      hitbox: { xOffset: 8, yOffset: 8, w: 44, h: 44 }
     };
+
+    // 궁극기 상태
+    let ultiReady = true; // 준비되면 true
+    let ultiCool = 50000; // === 50초 쿨타임 (ms)
+    let ultiDuration = 2000; // 궁극기 지속(ms)
+    let ultiActive = false;
+    let ultiLast = 0;
 
     // 장애물 배열
     let obstacles = [];
+
     let score = 0;
+    let startTime = null;
     let gameOver = false;
 
-    function randomX() {
-      return Math.floor(Math.random() * (canvas.width - 30));
+    function getObstacleInterval(sec) {
+      return Math.max(18, 50 - Math.floor(sec * 1.7)); // 최소 간격 18프레임
     }
     function makeObstacle() {
       obstacles.push({
-        x: randomX(),
-        y: -45,
-        w: 45,
-        h: 45,
-        speed: 6 + Math.random() * 4
+        x: Math.random() * (canvas.width - 44),
+        y: -44,
+        w: 44,
+        h: 44,
+        speed: 5 + Math.random() * 2,
+        hitbox: { xOffset: 12, yOffset: 10, w: 20, h: 24 }
       });
     }
 
-    let tick = 0;
+    function updatePlayer() {
+      if (player.movingLeft) player.speed -= player.accel;
+      if (player.movingRight) player.speed += player.accel;
+      if (!player.movingLeft && !player.movingRight) {
+        if (player.speed > 0) player.speed = Math.max(0, player.speed - player.friction);
+        else if (player.speed < 0) player.speed = Math.min(0, player.speed + player.friction);
+      }
+      player.speed = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.speed));
+      player.x += player.speed;
+
+      if (player.x < 0) { player.x = 0; player.speed = 0; }
+      if (player.x + player.w > canvas.width) { player.x = canvas.width - player.w; player.speed = 0; }
+    }
+
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 플레이어 그림(도지.png)
-      ctx.drawImage(dogeImg, player.x, player.y, player.w, player.h);
-
-      // 장애물 그림(개고기로켓.png)
+      // 장애물(개고기로켓.png)
       obstacles.forEach(ob => {
         ctx.drawImage(rocketImg, ob.x, ob.y, ob.w, ob.h);
+        // 히트박스 디버그 박스
+        // ctx.strokeStyle="#0ff"; ctx.strokeRect(ob.x+ob.hitbox.xOffset, ob.y+ob.hitbox.yOffset, ob.hitbox.w, ob.hitbox.h);
       });
 
-      // 점수 표시
+      // 플레이어(도지.png)
+      ctx.drawImage(dogeImg, player.x, player.y, player.w, player.h);
+      // ctx.strokeStyle="#ff0"; ctx.strokeRect(player.x+player.hitbox.xOffset, player.y+player.hitbox.yOffset, player.hitbox.w, player.hitbox.h);
+
       ctx.fillStyle = "#fff";
       ctx.font = "bold 25px sans-serif";
       ctx.fillText(`점수: ${score}`, 10, 35);
+
+      // 궁극기 표시
+      if (ultiActive) {
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = "#40f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        ctx.font = "bold 35px sans-serif";
+        ctx.fillText("시간 멈춤!!", 120, 310);
+      }
     }
 
+    let tick = 0;
     function update() {
       if (gameOver) return;
 
-      tick++;
-      if (tick % 30 === 0) makeObstacle();
+      const now = Date.now();
+      if (!startTime) startTime = now;
+      let sec = Math.floor((now - startTime) / 1000);
 
-      // 장애물 이동 및 충돌 체크
+      // 장애물 생성 빈도 자동 조절 (궁극기 중엔 안 생김)
+      if (!ultiActive && tick % getObstacleInterval(sec) === 0) makeObstacle();
+
+      // 플레이어 업데이트
+      updatePlayer();
+
+      // 장애물 이동 및 충돌체크
       obstacles.forEach((ob, idx) => {
-        ob.y += ob.speed;
+        if (!ultiActive) ob.y += ob.speed + sec * 0.05; // 궁극기 중엔 멈춤!
         if (ob.y > canvas.height) {
           obstacles.splice(idx, 1);
           score++;
-        }
-        // 충돌
-        if (
-          ob.x < player.x + player.w &&
-          ob.x + ob.w > player.x &&
-          ob.y < player.y + player.h &&
-          ob.y + ob.h > player.y
-        ) {
-          gameOver = true;
-          document.getElementById('score').innerHTML = `<h1>게임 오버! 점수: ${score}</h1><button onclick="window.location.reload()">다시하기</button>`;
+        } else {
+          // 히트박스 기준 충돌판정
+          let obx = ob.x + ob.hitbox.xOffset, oby = ob.y + ob.hitbox.yOffset, obw = ob.hitbox.w, obh = ob.hitbox.h;
+          let plx = player.x + player.hitbox.xOffset, ply = player.y + player.hitbox.yOffset, plw = player.hitbox.w, plh = player.hitbox.h;
+          if (obx < plx + plw && obx + obw > plx &&
+            oby < ply + plh && oby + obh > ply) {
+            gameOver = true;
+            document.getElementById('gameover').innerHTML =
+              `<h1>게임 오버! 점수: ${score}</h1><button onclick="window.location.reload()">다시하기</button>`;
+          }
         }
       });
+
+      // 궁극기 쿨/상태 표시
+      if (ultiActive && now - ultiLast > ultiDuration) {
+        ultiActive = false;
+        ultiReady = false;
+        ultiLast = now;
+      }
+      if (!ultiActive && !ultiReady && now - ultiLast > ultiCool) {
+        ultiReady = true;
+      }
+      document.getElementById('ulti').innerHTML =
+        ultiActive
+          ? "<b>궁극기 가동중!!</b>"
+          : ultiReady
+            ? "F를 눌러 궁극기 [시간멈춤] 사용 가능!"
+            : `궁극기 충전중... (${Math.ceil((ultiCool - (now-ultiLast))/1000)}초)`;
+
+      tick++;
+      document.getElementById('score').innerText = `최고기록 : ${score}`;
     }
 
     function gameLoop() {
@@ -100,18 +174,27 @@
       if (!gameOver) requestAnimationFrame(gameLoop);
     }
 
-    // 키보드 입력
+    // 키 이벤트: 좌우 + 궁극기
     window.addEventListener("keydown", function(e){
-      if(e.key === "ArrowLeft" && player.x > 0) player.x -= player.speed;
-      if(e.key === "ArrowRight" && player.x + player.w < canvas.width) player.x += player.speed;
+      if(e.code === "ArrowLeft") player.movingLeft = true;
+      if(e.code === "ArrowRight") player.movingRight = true;
+      if(e.code === "KeyF" && ultiReady && !ultiActive) {
+        ultiActive = true;
+        ultiLast = Date.now();
+      }
+    });
+    window.addEventListener("keyup", function(e){
+      if(e.code === "ArrowLeft") player.movingLeft = false;
+      if(e.code === "ArrowRight") player.movingRight = false;
     });
 
-    // 이미지가 모두 로딩된 뒤 게임 시작
-    let imagesLoaded = 0;
-    dogeImg.onload = rocketImg.onload = function () {
-      imagesLoaded++;
-      if (imagesLoaded === 2) gameLoop();
-    };
+    let loadCount = 0;
+    [dogeImg, rocketImg].forEach(img => {
+      img.onload = () => {
+        loadCount++;
+        if (loadCount === 2) gameLoop();
+      }
+    });
   </script>
 </body>
 </html>

@@ -1,368 +1,264 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<title>개고기 피하기 공장</title>
-<style>
-body { background:#333; color:#fff; margin:0; font-family: sans-serif; }
-h2 { margin-top:20px; }
-#container { width:400px; margin:40px auto 0 auto; position:relative; }
-#lobby, #shop, #gamearea, #gameoverbox { display:none; }
-#lobby, #shop {
-  background:rgba(30,30,30,0.98); border-radius:18px; padding:30px 18px; box-shadow:0 8px 32px #222;
-}
-.menu-btn { margin:10px 7px 0 7px; font-size:18px; padding:10px 40px; background:#409; color:#fff; border:none; border-radius:10px; cursor:pointer;}
-#point {text-align:right; margin-bottom:6px; font-size:19px;}
-#shop-tabs { display:flex; gap:8px; margin-bottom:24px; }
-.shop-tab { padding:7px 22px; background:#444; color:#fff; border-radius:7px; cursor:pointer; font-size:17px; border:none; }
-.shop-tab.active { background:#409; color:#ffd700;}
-#shop-items { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; }
-.shop-item { background:#222; border-radius:12px; padding:10px; text-align:center; width:110px; }
-.shop-item img { width:55px;height:55px; border-radius:10px; background:#444; }
-.shop-item .buy-btn { margin-top:7px; padding:4px 20px; font-size:15px; border-radius:7px; border:none; cursor:pointer;}
-.shop-item .owned { color:#ffd700; margin-top:6px;}
-.shop-item .price { color:#6af;}
-#shop-selected { text-align:center; margin-bottom:13px; font-weight:bold; font-size:18px;}
-#gamearea { position:relative; }
-#score, #ulti { margin:12px 0;}
-#gameoverbox { position:absolute; left:0; top:0; width:100%; height:100%; z-index:20;
-  display:flex; flex-direction:column; align-items:center; justify-content:center; }
-#gameoverinner { background:rgba(20,20,20,0.94); border-radius:20px; box-shadow:0 0 40px #222;
-  padding:48px 48px 32px 48px; min-width:350px; display:flex; flex-direction:column; align-items:center; }
-#gameoverinner h1 {margin:0 0 8px 0; font-size:2.2em; color:#ff0;}
-#gameoverinner .record {font-size:1.2em; color:#ffd700; margin-bottom:20px;}
-#gameoverinner button { font-size:20px; padding:8px 32px; background:#409; color:#fff; border:none;
-  border-radius:8px; cursor:pointer; margin-top:16px; }
-</style>
+  <meta charset="UTF-8">
+  <title>개고기 피하기 공장</title>
+  <style>
+    canvas { background: #222; display: block; margin: 0 auto; }
+    body { text-align: center; font-family: sans-serif; color: #fff; background: #333;}
+    h2 { margin-top: 20px;}
+    #score, #ulti { margin: 12px 0; }
+    #gameoverbox {
+      position: absolute;
+      left: 0; top: 0; width: 100%; height: 100%;
+      display: flex; flex-direction:column;
+      align-items: center; justify-content:center;
+      pointer-events: auto;
+      z-index: 10;
+    }
+    #gameoverinner {
+      background: rgba(20,20,20,0.94);
+      border-radius: 20px;
+      box-shadow: 0 0 40px #222;
+      padding: 48px 48px 32px 48px;
+      min-width: 350px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #gameoverinner h1 {
+      margin: 0 0 8px 0;
+      font-size: 2.2em;
+      color: #ff0;
+    }
+    #gameoverinner .record {
+      font-size: 1.2em;
+      color: #ffd700;
+      margin-bottom: 20px;
+    }
+    #gameoverinner button {
+      font-size: 20px;
+      padding: 8px 32px;
+      background: #409;
+      color: #fff;
+      border: none;
+      border-radius:8px;
+      cursor:pointer;
+      margin-top:16px;
+    }
+  </style>
 </head>
 <body>
-<h2>개고기 피하기 공장</h2>
-<div id="container">
-  <!-- 로비 -->
-  <div id="lobby">
-    <div id="point"></div>
-    <div style="margin-bottom:20px;">
-      <span style="font-size:1.2em;">최고기록:</span> <span id="topscore"></span>
-    </div>
-    <button class="menu-btn" onclick="showGame()">게임 시작</button>
-    <button class="menu-btn" onclick="showShop()">상점</button>
-  </div>
-
-  <!-- 상점 -->
-  <div id="shop">
-    <div id="point"></div>
-    <div id="shop-selected"></div>
-    <div id="shop-tabs">
-      <button class="shop-tab" id="tab-skin" onclick="selectShopTab('skin')">스킨</button>
-      <button class="shop-tab" id="tab-char" onclick="selectShopTab('char')">캐릭터</button>
-      <button class="shop-tab" id="tab-bg" onclick="selectShopTab('bg')">배경스킨</button>
-    </div>
-    <div id="shop-items"></div>
-    <button class="menu-btn" style="margin-top:10px;" onclick="showLobby()">로비로 돌아가기</button>
-  </div>
-
-  <!-- 게임 화면 -->
-  <div id="gamearea">
-    <div id="ulti"></div>
+  <h2>개고기 피하기 공장</h2>
+  <div id="ulti"></div>
+  <div style="position:relative;width:400px;height:600px;margin:auto;">
     <canvas id="game" width="400" height="600" style="z-index:1;"></canvas>
-    <div id="gameoverbox"></div>
-    <div id="score"></div>
-    <audio id="theworld-audio" src="더월드.mp3"></audio>
+    <div id="gameover"></div>
+    <!-- 중앙에 띄우는 오버레이 박스 -->
+    <div id="gameoverbox" style="display:none;"></div>
   </div>
-</div>
+  <div id="score"></div>
+  <audio id="theworld-audio" src="더월드.mp3"></audio>
+  <script>
+    const dogeImg = new Image();
+    dogeImg.src = "도지.png";
+    const rocketImg = new Image();
+    rocketImg.src = "개고기로켓.png";
+    const theWorldAudio = document.getElementById('theworld-audio');
 
-<script>
-/* --- 게임/포인트/스킨 데이터 관리 --- */
-// 샘플 아이템들, 실제 이미지와 맞게 수정 필요
-const shopData = {
-  skin: [
-    {id:'doge', name:'도지', img:'도지.png', price:0},   // 기본 제공
-    {id:'gold', name:'황금도지', img:'gold_doge.png', price:200}
-  ],
-  char: [
-    {id:'normal', name:'기본 캐릭터', img:'도지.png', price:0},
-    {id:'super', name:'슈퍼도지', img:'super_doge.png', price:300}
-  ],
-  bg: [
-    {id:'default', name:'기본 배경', img:'bg_default.png', price:0},
-    {id:'space', name:'우주', img:'bg_space.png', price:180}
-  ]
-};
-function getOwned(type) {
-  // owned 항목을 세팅: shop_owned_skin, shop_owned_char, shop_owned_bg
-  return JSON.parse(localStorage.getItem('shop_owned_'+type)||'["'+shopData[type][0].id+'"]');
-}
-function setOwned(type, arr) {
-  localStorage.setItem('shop_owned_'+type,JSON.stringify(arr));
-}
-function getEquipped(type) {
-  // 현재 착용중 값: shop_equip_skin...
-  return localStorage.getItem('shop_equip_'+type)||shopData[type][0].id;
-}
-function setEquipped(type, val) {
-  localStorage.setItem('shop_equip_'+type,val);
-}
-function getPoint() {
-  return Number(localStorage.getItem('point')||'0');
-}
-function setPoint(val) {
-  localStorage.setItem('point',val+"");
-}
-function getBestScore() {
-  return Number(localStorage.getItem('bestScore')||'0');
-}
-function setBestScore(val) {
-  localStorage.setItem('bestScore',val+"");
-}
-/* ---- UI 전환 ---- */
-function showLobby() {
-  document.getElementById('lobby').style.display = 'block';
-  document.getElementById('gamearea').style.display = 'none';
-  document.getElementById('shop').style.display = 'none';
-  updateLobbyInfo();
-}
-function showShop() {
-  document.getElementById('lobby').style.display = 'none';
-  document.getElementById('gamearea').style.display = 'none';
-  document.getElementById('shop').style.display = 'block';
-  selectedShopTab = "skin";
-  renderShop();
-}
-function showGame() {
-  document.getElementById('lobby').style.display = 'none';
-  document.getElementById('gamearea').style.display = 'block';
-  document.getElementById('shop').style.display = 'none';
-  startGame();
-}
-/* ---- 로비 표시 및 포인트/최고기록 ---- */
-function updateLobbyInfo() {
-  document.getElementById('point').innerHTML = `<b>포인트:</b> ${getPoint()}`;
-  document.getElementById('topscore').innerText = getBestScore();
-}
-/* ---- 상점 탭 표시 ---- */
-let selectedShopTab = "skin";
-function selectShopTab(tab) {
-  selectedShopTab = tab;
-  renderShop();
-}
-function renderShop() {
-  // 탭 활성화
-  ['skin','char','bg'].forEach(t=>{
-    document.getElementById('tab-'+t).classList.toggle('active', selectedShopTab===t);
-  });
-  // 적용중 표시
-  const selected = getEquipped(selectedShopTab);
-  document.getElementById('shop-selected').innerHTML =
-    `<span style="color:#ffd700;">적용중:</span> <b>${shopData[selectedShopTab].find(i=>i.id===selected).name}</b>`;
-  // 아이템 목록
-  const items = shopData[selectedShopTab];
-  const ownedArr = getOwned(selectedShopTab);
-  const point = getPoint();
-  let html = '';
-  items.forEach(item=>{
-    html += `<div class="shop-item">
-      <img src="${item.img}" alt="${item.name}">
-      <div>${item.name}</div>
-      ${ownedArr.includes(item.id)
-        ? (getEquipped(selectedShopTab)===item.id
-            ? '<div class="owned">[적용중]</div>'
-            : `<button class="buy-btn" onclick="equipItem('${selectedShopTab}','${item.id}')">적용하기</button>`)
-        : `<div class="price">가격: ${item.price}P</div>
-           <button class="buy-btn" onclick="buyItem('${selectedShopTab}','${item.id}')">구매</button>`}
-    </div>`;
-  });
-  document.getElementById('shop-items').innerHTML = html;
-  document.getElementById('point').innerHTML = `<b>포인트:</b> ${point}`;
-}
-function buyItem(type,id) {
-  const item = shopData[type].find(i=>i.id===id);
-  let ownedArr = getOwned(type);
-  let pt = getPoint();
-  if(pt < item.price) { alert('포인트가 부족합니다!'); return; }
-  setPoint(pt-item.price);
-  ownedArr.push(id);
-  setOwned(type, ownedArr);
-  setEquipped(type, id);
-  renderShop();
-}
-function equipItem(type,id) {
-  setEquipped(type, id);
-  renderShop();
-}
-/* ---- 게임 ---- */
-let dogeImg = new Image();
-let rocketImg = new Image();
-let bgImg = null; // 배경 이미지
-const theWorldAudio = document.getElementById('theworld-audio');
-let player, obstacles, score, bestScore, point, tick, startTime, gameOver, ultiReady, ultiCool, ultiDuration, ultiActive, ultiLast, soundPlayed;
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
 
-function loadGameResources() {
-  // 선택된 이미지 불러오기
-  dogeImg = new Image();
-  rocketImg = new Image();
-  bgImg = null;
-  dogeImg.src = shopData.char.find(i=>i.id===getEquipped('char')).img;
-  rocketImg.src = shopData.skin.find(i=>i.id===getEquipped('skin')).img;
-  let bgid = getEquipped('bg');
-  if(shopData.bg.find(i=>i.id===bgid)) {
-    bgImg = new Image();
-    bgImg.src = shopData.bg.find(i=>i.id===bgid).img;
-  }
-}
-function startGame() {
-  loadGameResources();
-  player = {
-    x: 400/2-30,
-    y: 600-80,
-    w: 60,
-    h: 60,
-    speed: 0,
-    maxSpeed: 8,
-    accel: 0.5,
-    friction: 0.1,
-    movingLeft: false,
-    movingRight: false,
-    hitbox: { xOffset: 8, yOffset: 8, w: 44, h: 44 }
-  };
-  obstacles = [];
-  score = 0;
-  bestScore = getBestScore();
-  point = getPoint();
-  tick = 0;
-  startTime = null;
-  gameOver = false;
-  ultiReady = true;
-  ultiCool = 50000; // 50초
-  ultiDuration = 2000;
-  ultiActive = false;
-  ultiLast = 0;
-  soundPlayed = false;
-  document.getElementById('score').innerText = `최고기록 : ${bestScore} / 포인트 : ${point}`;
-  document.getElementById('gameoverbox').style.display = 'none';
-  gameLoop();
-}
+    // 최고기록(쿠키/localStorage)
+    function getBestScore() {
+      return Number(localStorage.getItem('bestScore')||'0');
+    }
+    function setBestScore(val) {
+      localStorage.setItem('bestScore', val+"");
+    }
 
-function getObstacleInterval(sec) {
-  return Math.max(18, 50 - Math.floor(sec * 1.7));
-}
-function makeObstacle() {
-   obstacles.push({
-     x: Math.random() * (400 - 44),
-     y: -44,
-     w: 44,
-     h: 44,
-     speed: 5 + Math.random() * 2,
-     hitbox: { xOffset: 12, yOffset: 10, w: 20, h: 24 }
-   });
-}
-function updatePlayer() {
-  if (player.movingLeft) player.speed -= player.accel;
-  if (player.movingRight) player.speed += player.accel;
-  if (!player.movingLeft && !player.movingRight) {
-    if (player.speed > 0) player.speed = Math.max(0, player.speed - player.friction);
-    else if (player.speed < 0) player.speed = Math.min(0, player.speed + player.friction);
-  }
-  player.speed = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.speed));
-  player.x += player.speed;
-  if (player.x < 0) { player.x = 0; player.speed = 0; }
-  if (player.x + player.w > 400) { player.x = 400 - player.w; player.speed = 0; }
-}
-function draw() {
-  ctx.clearRect(0, 0, 400, 600);
-  if(bgImg) ctx.drawImage(bgImg,0,0,400,600); // 배경 스킨
-  obstacles.forEach(ob => {
-    ctx.drawImage(rocketImg, ob.x, ob.y, ob.w, ob.h);
-  });
-  ctx.drawImage(dogeImg, player.x, player.y, player.w, player.h);
-  ctx.fillStyle = "#fff";
-  ctx.font = "bold 25px sans-serif";
-  ctx.fillText(`점수: ${score}`, 10, 35);
-  if (ultiActive) {
-    ctx.save();
-    ctx.globalAlpha = 0.2;
-    ctx.fillStyle = "#40f";
-    ctx.fillRect(0, 0, 400, 600);
-    ctx.restore();
-    ctx.font = "bold 35px sans-serif";
-    ctx.fillText("더 월드!", 135, 310);
-  }
-}
-function update() {
-  if(gameOver) return;
-  const now = Date.now();
-  if(!startTime) startTime = now;
-  let sec = Math.floor((now - startTime) / 1000);
-  if (!ultiActive && tick % getObstacleInterval(sec) === 0) makeObstacle();
-  updatePlayer();
-  obstacles.forEach((ob,idx) => {
-    if(!ultiActive) ob.y += ob.speed + sec*0.05;
-    if(ob.y > 600) { obstacles.splice(idx,1); score++; }
-    else {
-      let obx = ob.x + ob.hitbox.xOffset, oby = ob.y + ob.hitbox.yOffset, obw = ob.hitbox.w, obh = ob.hitbox.h;
-      let plx = player.x + player.hitbox.xOffset, ply = player.y + player.hitbox.yOffset, plw = player.hitbox.w, plh = player.hitbox.h;
-      if(obx < plx+plw && obx+obw > plx && oby < ply+plh && oby+obh > ply) {
-        gameOver = true;
-        let recent = score;
-        let best = bestScore;
-        let totalPt = getPoint();
-        // 최고점수 갱신 및 포인트 적립
-        if(score > bestScore) {
-          bestScore = score;
-          setBestScore(score);
-        }
-        let addPt = score;
-        setPoint(totalPt+addPt);
-        // 화면 중앙에 오버레이 띄우기
-        document.getElementById('gameoverbox').innerHTML = `
-          <div id="gameoverinner">
-            <h1>게임 오버!</h1>
-            <div class="record">점수: ${recent}<br>최고기록: ${bestScore}<br>획득 포인트: ${addPt}</div>
-            <button onclick="showLobby()">로비로 돌아가기</button>
-          </div>
-        `;
-        document.getElementById('gameoverbox').style.display = "flex";
+    let bestScore = getBestScore(); // 시작시 로딩
+    document.getElementById('score').innerText = `최고기록 : ${bestScore}`;
+
+    const player = {
+      x: canvas.width/2-30,
+      y: canvas.height-80,
+      w: 60,
+      h: 60,
+      speed: 0,
+      maxSpeed: 8,
+      accel: 0.5,
+      friction: 0.1,
+      movingLeft: false,
+      movingRight: false,
+      hitbox: { xOffset: 8, yOffset: 8, w: 44, h: 44 }
+    };
+
+    // 궁극기(더 월드) 상태
+    let ultiReady = true;
+    let ultiCool = 50000; // 50초
+    let ultiDuration = 2000;
+    let ultiActive = false;
+    let ultiLast = 0;
+    let soundPlayed = false;
+
+    let obstacles = [];
+    let score = 0;
+    let startTime = null;
+    let gameOver = false;
+
+    function getObstacleInterval(sec) {
+      return Math.max(18, 50 - Math.floor(sec * 1.7));
+    }
+    function makeObstacle() {
+      obstacles.push({
+        x: Math.random() * (canvas.width - 44),
+        y: -44,
+        w: 44,
+        h: 44,
+        speed: 5 + Math.random() * 2,
+        hitbox: { xOffset: 12, yOffset: 10, w: 20, h: 24 }
+      });
+    }
+
+    function updatePlayer() {
+      if (player.movingLeft) player.speed -= player.accel;
+      if (player.movingRight) player.speed += player.accel;
+      if (!player.movingLeft && !player.movingRight) {
+        if (player.speed > 0) player.speed = Math.max(0, player.speed - player.friction);
+        else if (player.speed < 0) player.speed = Math.min(0, player.speed + player.friction);
+      }
+      player.speed = Math.max(-player.maxSpeed, Math.min(player.maxSpeed, player.speed));
+      player.x += player.speed;
+
+      if (player.x < 0) { player.x = 0; player.speed = 0; }
+      if (player.x + player.w > canvas.width) { player.x = canvas.width - player.w; player.speed = 0; }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      obstacles.forEach(ob => {
+        ctx.drawImage(rocketImg, ob.x, ob.y, ob.w, ob.h);
+      });
+      ctx.drawImage(dogeImg, player.x, player.y, player.w, player.h);
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 25px sans-serif";
+      ctx.fillText(`점수: ${score}`, 10, 35);
+
+      // 궁극기 표시 (더 월드)
+      if (ultiActive) {
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = "#40f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        ctx.font = "bold 35px sans-serif";
+        ctx.fillText("더 월드!", 135, 310);
       }
     }
-  });
-  if (ultiActive && !soundPlayed) {
-    theWorldAudio.currentTime = 0;
-    theWorldAudio.play();
-    soundPlayed = true;
-  }
-  if (ultiActive && now - ultiLast > ultiDuration) {
-    ultiActive = false;
-    ultiReady = false;
-    ultiLast = now;
-    soundPlayed = false;
-  }
-  if (!ultiActive && !ultiReady && now - ultiLast > ultiCool) {
-    ultiReady = true;
-  }
-  document.getElementById('ulti').innerHTML =
-    ultiActive
-      ? "<b>더 월드 가동중!!</b>"
-      : ultiReady
-        ? "F를 눌러 궁극기 [더 월드] 사용 가능!"
-        : `더 월드 충전중... (${Math.ceil((ultiCool - (now-ultiLast))/1000)}초)`;
-  tick++;
-  document.getElementById('score').innerText = `최고기록 : ${bestScore} / 포인트 : ${getPoint()}`;
-}
-function gameLoop() { update(); draw(); if(!gameOver) requestAnimationFrame(gameLoop);}
-window.addEventListener("keydown", function(e){
-  if(e.code === "ArrowLeft") player.movingLeft = true;
-  if(e.code === "ArrowRight") player.movingRight = true;
-  if(e.code === "KeyF" && ultiReady && !ultiActive) {
-    ultiActive = true;
-    ultiLast = Date.now();
-    soundPlayed = false;
-  }
-});
-window.addEventListener("keyup", function(e){
-  if(e.code === "ArrowLeft") player.movingLeft = false;
-  if(e.code === "ArrowRight") player.movingRight = false;
-});
-// 최초 진입 시 로비로
-showLobby();
-</script>
+
+    let tick = 0;
+    function update() {
+      if (gameOver) return;
+
+      const now = Date.now();
+      if (!startTime) startTime = now;
+      let sec = Math.floor((now - startTime) / 1000);
+
+      if (!ultiActive && tick % getObstacleInterval(sec) === 0) makeObstacle();
+      updatePlayer();
+
+      obstacles.forEach((ob, idx) => {
+        if (!ultiActive) ob.y += ob.speed + sec * 0.05;
+        if (ob.y > canvas.height) {
+          obstacles.splice(idx, 1);
+          score++;
+        } else {
+          // 히트박스 기준 충돌판정
+          let obx = ob.x + ob.hitbox.xOffset, oby = ob.y + ob.hitbox.yOffset, obw = ob.hitbox.w, obh = ob.hitbox.h;
+          let plx = player.x + player.hitbox.xOffset, ply = player.y + player.hitbox.yOffset, plw = player.hitbox.w, plh = player.hitbox.h;
+          if (obx < plx + plw && obx + obw > plx && oby < ply + plh && oby + obh > ply) {
+            gameOver = true;
+            // 최고기록 갱신
+            if(score > bestScore) {
+              bestScore = score;
+              setBestScore(score);
+            }
+            // 화면 중앙에 오버레이 띄우기
+            showGameOver();
+          }
+        }
+      });
+
+      // 궁극기 쿨/상태 표시
+      if (ultiActive && !soundPlayed) {
+        theWorldAudio.currentTime = 0;
+        theWorldAudio.play();
+        soundPlayed = true;
+      }
+      if (ultiActive && now - ultiLast > ultiDuration) {
+        ultiActive = false;
+        ultiReady = false;
+        ultiLast = now;
+        soundPlayed = false;
+      }
+      if (!ultiActive && !ultiReady && now - ultiLast > ultiCool) {
+        ultiReady = true;
+      }
+      document.getElementById('ulti').innerHTML =
+        ultiActive
+          ? "<b>더 월드 가동중!!</b>"
+          : ultiReady
+            ? "F를 눌러 궁극기 [더 월드] 사용 가능!"
+            : `더 월드 충전중... (${Math.ceil((ultiCool - (now-ultiLast))/1000)}초)`;
+
+      tick++;
+      document.getElementById('score').innerText = `최고기록 : ${bestScore}`;
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      if (!gameOver) requestAnimationFrame(gameLoop);
+    }
+
+    // 중앙 오버레이 박스 띄우기
+    function showGameOver() {
+      const box = document.getElementById('gameoverbox');
+      box.innerHTML = `
+        <div id="gameoverinner">
+          <h1>게임 오버!</h1>
+          <div class="record">점수: ${score}<br>최고기록: ${bestScore}</div>
+          <button onclick="window.location.reload()">다시하기</button>
+        </div>
+      `;
+      box.style.display = "flex";
+    }
+
+    window.addEventListener("keydown", function(e){
+      if(e.code === "ArrowLeft") player.movingLeft = true;
+      if(e.code === "ArrowRight") player.movingRight = true;
+      if(e.code === "KeyF" && ultiReady && !ultiActive) {
+        ultiActive = true;
+        ultiLast = Date.now();
+        soundPlayed = false;
+      }
+    });
+    window.addEventListener("keyup", function(e){
+      if(e.code === "ArrowLeft") player.movingLeft = false;
+      if(e.code === "ArrowRight") player.movingRight = false;
+    });
+
+    let loadCount = 0;
+    [dogeImg, rocketImg].forEach(img => {
+      img.onload = () => {
+        loadCount++;
+        if (loadCount === 2) gameLoop();
+      }
+    });
+
+  </script>
 </body>
 </html>

@@ -7,8 +7,8 @@
 body { background:#333; color:#fff; margin:0; font-family: sans-serif; }
 h2 { margin-top:20px; }
 #container { width:400px; margin:40px auto 0 auto; position:relative; }
-#lobby, #shop, #gamearea, #setting, #gameoverbox { display:none; }
-#lobby, #shop, #setting {
+#lobby, #shop, #gamearea, #gameoverbox { display:none; }
+#lobby, #shop {
   background:rgba(30,30,30,0.98); border-radius:18px; padding:30px 18px; box-shadow:0 8px 32px #222;
 }
 .menu-btn { margin:10px 7px 0 7px; font-size:18px; padding:10px 40px; background:#409; color:#fff; border:none; border-radius:10px; cursor:pointer;}
@@ -18,7 +18,7 @@ h2 { margin-top:20px; }
 .shop-tab.active { background:#409; color:#ffd700;}
 #shop-items { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; }
 .shop-item { background:#222; border-radius:12px; padding:10px; text-align:center; width:110px; }
-.shop-item img { width:55px; height:55px; border-radius:10px; background:#444; }
+.shop-item img { width:55px;height:55px; border-radius:10px; background:#444; }
 .shop-item .buy-btn { margin-top:7px; padding:4px 20px; font-size:15px; border-radius:7px; border:none; cursor:pointer;}
 .shop-item .owned { color:#ffd700; margin-top:6px;}
 .shop-item .price { color:#6af;}
@@ -33,12 +33,6 @@ h2 { margin-top:20px; }
 #gameoverinner .record {font-size:1.2em; color:#ffd700; margin-bottom:20px;}
 #gameoverinner button { font-size:20px; padding:8px 32px; background:#409; color:#fff; border:none;
   border-radius:8px; cursor:pointer; margin-top:16px; }
-#setting { text-align:center; }
-#setting-inner { margin-top:30px; background:#222; border-radius:16px; padding:30px 16px;}
-.setting-row { margin:14px 0; text-align:left;}
-.setting-row label { font-size:1.06em; margin-right:10px;}
-.setting-row input[type=range] { width:180px; }
-.setting-row select { font-size:1.07em; margin-left:9px;}
 </style>
 </head>
 <body>
@@ -50,10 +44,10 @@ h2 { margin-top:20px; }
     <div style="margin-bottom:20px;">
       <span style="font-size:1.2em;">최고기록:</span> <span id="topscore"></span>
     </div>
-    <button class="menu-btn" onclick="showGame()">시작</button>
+    <button class="menu-btn" onclick="showGame()">게임 시작</button>
     <button class="menu-btn" onclick="showShop()">상점</button>
-    <button class="menu-btn" onclick="showSetting()">설정</button>
   </div>
+
   <!-- 상점 -->
   <div id="shop">
     <div id="point"></div>
@@ -66,6 +60,7 @@ h2 { margin-top:20px; }
     <div id="shop-items"></div>
     <button class="menu-btn" style="margin-top:10px;" onclick="showLobby()">로비로 돌아가기</button>
   </div>
+
   <!-- 게임 화면 -->
   <div id="gamearea">
     <div id="ulti"></div>
@@ -73,70 +68,36 @@ h2 { margin-top:20px; }
     <div id="gameoverbox"></div>
     <div id="score"></div>
     <audio id="theworld-audio" src="더월드.mp3"></audio>
-    <audio id="giorno-audio" src="죠르노궁.mp3"></audio>
-  </div>
-  <!-- 설정 -->
-  <div id="setting">
-    <div id="setting-inner">
-      <h2>설정</h2>
-      <div class="setting-row">
-        <label for="vol-range">궁극기 볼륨:</label>
-        <input type="range" id="vol-range" min="0" max="100" value="70">
-        <span id="vol-value">70</span>%
-      </div>
-      <div class="setting-row">
-        <label for="control-sel">이동 컨트롤:</label>
-        <select id="control-sel">
-          <option value="arrow">방향키</option>
-          <option value="wasd">WASD</option>
-        </select>
-      </div>
-      <button class="menu-btn" onclick="showLobby()">로비로 돌아가기</button>
-    </div>
   </div>
 </div>
 
 <script>
+/* --- 게임/포인트/스킨 데이터 관리 --- */
+// 샘플 아이템들, 실제 이미지와 맞게 수정 필요
 const shopData = {
   skin: [
-    {id:'doge', name:'도지', img:'도지.png', price:0},
-    {id:'gold', name:'황금도지', img:'gold_doge.png', price:2000}
+    {id:'doge', name:'도지', img:'도지.png', price:0},   // 기본 제공
+    {id:'gold', name:'황금도지', img:'gold_doge.png', price:200}
   ],
   char: [
-    {id:'doge', name:'도지', img:'도지.png', price:0},
-    {id:'giorno', name:'죠르노도지', img:'죠르노도지.png', price:3000},
-    {id:'jotaro', name:'죠타로 도지', img:'죠타로 도지.png', price:3000}
+    {id:'normal', name:'기본 캐릭터', img:'도지.png', price:0},
+    {id:'super', name:'슈퍼도지', img:'super_doge.png', price:300}
   ],
   bg: [
     {id:'default', name:'기본 배경', img:'bg_default.png', price:0},
-    {id:'space', name:'우주', img:'bg_space.png', price:1800}
+    {id:'space', name:'우주', img:'bg_space.png', price:180}
   ]
 };
-function getSetting(key, def) {
-  let val = localStorage.getItem('setting_'+key);
-  if(val===null||val===undefined) return def;
-  return val;
-}
-function setSetting(key, val) {
-  localStorage.setItem('setting_'+key, val);
-}
 function getOwned(type) {
-  // 기본 캐릭터(도지)는 무조건 가지고 있음!
-  if (type=='char') {
-    let baseArr = JSON.parse(localStorage.getItem('shop_owned_'+type)||'["doge"]');
-    if (!baseArr.includes('doge')) baseArr.unshift('doge');
-    return baseArr;
-  }
+  // owned 항목을 세팅: shop_owned_skin, shop_owned_char, shop_owned_bg
   return JSON.parse(localStorage.getItem('shop_owned_'+type)||'["'+shopData[type][0].id+'"]');
 }
 function setOwned(type, arr) {
   localStorage.setItem('shop_owned_'+type,JSON.stringify(arr));
 }
 function getEquipped(type) {
-  // 캐릭터 기본: 도지
-  let v = localStorage.getItem('shop_equip_'+type);
-  if(type=='char' && (!v || v=='undefined')) v = 'doge';
-  return v||shopData[type][0].id;
+  // 현재 착용중 값: shop_equip_skin...
+  return localStorage.getItem('shop_equip_'+type)||shopData[type][0].id;
 }
 function setEquipped(type, val) {
   localStorage.setItem('shop_equip_'+type,val);
@@ -153,19 +114,17 @@ function getBestScore() {
 function setBestScore(val) {
   localStorage.setItem('bestScore',val+"");
 }
-
+/* ---- UI 전환 ---- */
 function showLobby() {
   document.getElementById('lobby').style.display = 'block';
   document.getElementById('gamearea').style.display = 'none';
   document.getElementById('shop').style.display = 'none';
-  document.getElementById('setting').style.display = 'none';
   updateLobbyInfo();
 }
 function showShop() {
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('gamearea').style.display = 'none';
   document.getElementById('shop').style.display = 'block';
-  document.getElementById('setting').style.display = 'none';
   selectedShopTab = "skin";
   renderShop();
 }
@@ -173,56 +132,44 @@ function showGame() {
   document.getElementById('lobby').style.display = 'none';
   document.getElementById('gamearea').style.display = 'block';
   document.getElementById('shop').style.display = 'none';
-  document.getElementById('setting').style.display = 'none';
   startGame();
 }
-function showSetting() {
-  document.getElementById('lobby').style.display = 'none';
-  document.getElementById('gamearea').style.display = 'none';
-  document.getElementById('shop').style.display = 'none';
-  document.getElementById('setting').style.display = 'block';
-  setupSettingUI();
-}
+/* ---- 로비 표시 및 포인트/최고기록 ---- */
 function updateLobbyInfo() {
   document.getElementById('point').innerHTML = `<b>포인트:</b> ${getPoint()}`;
   document.getElementById('topscore').innerText = getBestScore();
 }
+/* ---- 상점 탭 표시 ---- */
 let selectedShopTab = "skin";
 function selectShopTab(tab) {
   selectedShopTab = tab;
   renderShop();
 }
 function renderShop() {
+  // 탭 활성화
   ['skin','char','bg'].forEach(t=>{
     document.getElementById('tab-'+t).classList.toggle('active', selectedShopTab===t);
   });
+  // 적용중 표시
   const selected = getEquipped(selectedShopTab);
   document.getElementById('shop-selected').innerHTML =
     `<span style="color:#ffd700;">적용중:</span> <b>${shopData[selectedShopTab].find(i=>i.id===selected).name}</b>`;
+  // 아이템 목록
   const items = shopData[selectedShopTab];
   const ownedArr = getOwned(selectedShopTab);
   const point = getPoint();
   let html = '';
   items.forEach(item=>{
-    // 캐릭터 탭의 도지는 판매버튼을 절대 보이지 않게!
-    if (selectedShopTab=='char' && item.id=='doge') {
-      html += `<div class="shop-item">
-        <img src="${item.img}" alt="${item.name}">
-        <div>${item.name}</div>
-        ${getEquipped('char')==='doge' ? '<div class="owned">[적용중]</div>' : `<button class="buy-btn" onclick="equipItem('char','doge')">적용하기</button>`}
-      </div>`;
-    } else {
-      html += `<div class="shop-item">
-        <img src="${item.img}" alt="${item.name}">
-        <div>${item.name}</div>
-        ${ownedArr.includes(item.id)
-          ? (getEquipped(selectedShopTab)===item.id
-              ? '<div class="owned">[적용중]</div>'
-              : `<button class="buy-btn" onclick="equipItem('${selectedShopTab}','${item.id}')">적용하기</button>`)
-          : `<div class="price">가격: ${item.price}P</div>
-             <button class="buy-btn" onclick="buyItem('${selectedShopTab}','${item.id}')">구매</button>`}
-      </div>`;
-    }
+    html += `<div class="shop-item">
+      <img src="${item.img}" alt="${item.name}">
+      <div>${item.name}</div>
+      ${ownedArr.includes(item.id)
+        ? (getEquipped(selectedShopTab)===item.id
+            ? '<div class="owned">[적용중]</div>'
+            : `<button class="buy-btn" onclick="equipItem('${selectedShopTab}','${item.id}')">적용하기</button>`)
+        : `<div class="price">가격: ${item.price}P</div>
+           <button class="buy-btn" onclick="buyItem('${selectedShopTab}','${item.id}')">구매</button>`}
+    </div>`;
   });
   document.getElementById('shop-items').innerHTML = html;
   document.getElementById('point').innerHTML = `<b>포인트:</b> ${point}`;
@@ -242,24 +189,19 @@ function equipItem(type,id) {
   setEquipped(type, id);
   renderShop();
 }
-
 /* ---- 게임 ---- */
 let dogeImg = new Image();
 let rocketImg = new Image();
-let bgImg = null;
+let bgImg = null; // 배경 이미지
 const theWorldAudio = document.getElementById('theworld-audio');
-const giornoAudio = document.getElementById('giorno-audio');
-let player, obstacles, score, bestScore, point, tick, startTime, gameOver, ultiReady, ultiCool, ultiDuration, ultiActive, ultiLast, soundPlayed, revivalUsed;
-let controlMode = 'arrow'; // arrow 또는 wasd
-
-let currChar = 'doge'; // 현재 캐릭터
+let player, obstacles, score, bestScore, point, tick, startTime, gameOver, ultiReady, ultiCool, ultiDuration, ultiActive, ultiLast, soundPlayed;
 
 function loadGameResources() {
-  currChar = getEquipped('char');
+  // 선택된 이미지 불러오기
   dogeImg = new Image();
   rocketImg = new Image();
   bgImg = null;
-  dogeImg.src = shopData.char.find(i=>i.id===currChar).img;
+  dogeImg.src = shopData.char.find(i=>i.id===getEquipped('char')).img;
   rocketImg.src = shopData.skin.find(i=>i.id===getEquipped('skin')).img;
   let bgid = getEquipped('bg');
   if(shopData.bg.find(i=>i.id===bgid)) {
@@ -289,25 +231,12 @@ function startGame() {
   tick = 0;
   startTime = null;
   gameOver = false;
-  revivalUsed = false;
   ultiReady = true;
-  soundPlayed = false;
-  // 궁극기 타입 및 값
-  if(currChar=='doge'){
-    ultiCool = 30000; // 도지로켓 쿨타임 30초
-    ultiDuration = 1800; // 도지로켓 지속 1.8초
-  } else if(currChar=='giorno'){
-    ultiCool = 200000;// 죠르노도지 쿨타임 200초
-    ultiDuration = 0; // 죠르노도지 궁극기는 오디오 끝날때까지
-  } else {// 죠타로도지: 더월드
-    ultiCool = 50000;
-    ultiDuration = 2000;
-  }
+  ultiCool = 50000; // 50초
+  ultiDuration = 2000;
   ultiActive = false;
   ultiLast = 0;
-  controlMode = getSetting('control','arrow');
-  theWorldAudio.volume = +getSetting('vol',70)/100;
-  giornoAudio.volume = +getSetting('vol',70)/100;
+  soundPlayed = false;
   document.getElementById('score').innerText = `최고기록 : ${bestScore} / 포인트 : ${point}`;
   document.getElementById('gameoverbox').style.display = 'none';
   gameLoop();
@@ -338,10 +267,9 @@ function updatePlayer() {
   if (player.x < 0) { player.x = 0; player.speed = 0; }
   if (player.x + player.w > 400) { player.x = 400 - player.w; player.speed = 0; }
 }
-
 function draw() {
   ctx.clearRect(0, 0, 400, 600);
-  if(bgImg) ctx.drawImage(bgImg,0,0,400,600);
+  if(bgImg) ctx.drawImage(bgImg,0,0,400,600); // 배경 스킨
   obstacles.forEach(ob => {
     ctx.drawImage(rocketImg, ob.x, ob.y, ob.w, ob.h);
   });
@@ -349,74 +277,42 @@ function draw() {
   ctx.fillStyle = "#fff";
   ctx.font = "bold 25px sans-serif";
   ctx.fillText(`점수: ${score}`, 10, 35);
-
-  // 궁극기 표시 (각 캐릭터별)
   if (ultiActive) {
     ctx.save();
     ctx.globalAlpha = 0.2;
     ctx.fillStyle = "#40f";
     ctx.fillRect(0, 0, 400, 600);
     ctx.restore();
-    ctx.font = "bold 32px sans-serif";
-    let ultiName = (currChar=='doge')?"도지로켓!":(currChar=='giorno')?"무효화!":"더 월드!";
-    ctx.fillText(ultiName, 120, 310);
+    ctx.font = "bold 35px sans-serif";
+    ctx.fillText("더 월드!", 135, 310);
   }
 }
-
 function update() {
   if(gameOver) return;
   const now = Date.now();
   if(!startTime) startTime = now;
   let sec = Math.floor((now - startTime) / 1000);
-
-  // 도지로켓 궁극기(도지는 발동시 장애물 속도+점수 폭증)
-  let roketSpeedUp = (currChar=='doge' && ultiActive);
-
   if (!ultiActive && tick % getObstacleInterval(sec) === 0) makeObstacle();
-
   updatePlayer();
-
   obstacles.forEach((ob,idx) => {
-    // 궁극기마다 효과 다르게
-    if (currChar=='doge' && ultiActive) {
-      ob.y += (ob.speed + sec*0.08)*3.3;
-    } else if (currChar=='giorno' && ultiActive) {
-      // 장애물은 무효화(즉시 삭제)
-      obstacles.splice(idx,obstacles.length);
-      return;
-    } else {
-      ob.y += ob.speed + sec*0.05;
-    }
-
-    if(ob.y > 600) {
-      obstacles.splice(idx,1);
-      score++;
-    }
+    if(!ultiActive) ob.y += ob.speed + sec*0.05;
+    if(ob.y > 600) { obstacles.splice(idx,1); score++; }
     else {
       let obx = ob.x + ob.hitbox.xOffset, oby = ob.y + ob.hitbox.yOffset, obw = ob.hitbox.w, obh = ob.hitbox.h;
       let plx = player.x + player.hitbox.xOffset, ply = player.y + player.hitbox.yOffset, plw = player.hitbox.w, plh = player.hitbox.h;
       if(obx < plx+plw && obx+obw > plx && oby < ply+plh && oby+obh > ply) {
-        // 죠르노도지일 때 패시브(부활)
-        if(currChar=='giorno' && !revivalUsed) {
-          revivalUsed = true;
-          // 장애물 초기화 후 부활
-          obstacles = [];
-          score = Math.max(0, score-5); // 점수 조금 차감
-          player.x = 400/2-30;
-          player.speed = 0;
-          return;
-        }
-        // 게임오버 처리
         gameOver = true;
         let recent = score;
         let best = bestScore;
         let totalPt = getPoint();
+        // 최고점수 갱신 및 포인트 적립
         if(score > bestScore) {
           bestScore = score;
           setBestScore(score);
         }
         let addPt = score;
-        setPoint(totalPt+addPt); // 포인트 자동 적립
+        setPoint(totalPt+addPt);
+        // 화면 중앙에 오버레이 띄우기
         document.getElementById('gameoverbox').innerHTML = `
           <div id="gameoverinner">
             <h1>게임 오버!</h1>
@@ -428,40 +324,12 @@ function update() {
       }
     }
   });
-
-  // 도지 궁극기 동안 점수 보정 빠르게
-  if (currChar=='doge' && ultiActive) {
-    score += 4; // 0.03초~0.04초마다 호출이므로 초당 80~120점
-  }
-
-  // 궁극기 UI/사운드(캐릭터별)
   if (ultiActive && !soundPlayed) {
-    if(currChar=='doge'){ /* 도지는 사운드 없음 */ }
-    else if(currChar=='giorno'){
-      giornoAudio.currentTime = 0;
-      giornoAudio.volume = +getSetting('vol',70)/100;
-      giornoAudio.play();
-      giornoAudio.onended = function(){
-         ultiActive = false;
-         ultiReady = false;
-         ultiLast = Date.now();
-         soundPlayed = false;
-      };
-    }
-    else { // 죠타로 도지 == 더월드
-      theWorldAudio.currentTime = 0;
-      theWorldAudio.volume = +getSetting('vol',70)/100;
-      theWorldAudio.play();
-    }
+    theWorldAudio.currentTime = 0;
+    theWorldAudio.play();
     soundPlayed = true;
   }
-  if (currChar=='doge' && ultiActive && now - ultiLast > ultiDuration) {
-    ultiActive = false;
-    ultiReady = false;
-    ultiLast = now;
-    soundPlayed = false;
-  }
-  if (currChar=='jotaro' && ultiActive && now - ultiLast > ultiDuration) {
+  if (ultiActive && now - ultiLast > ultiDuration) {
     ultiActive = false;
     ultiReady = false;
     ultiLast = now;
@@ -470,64 +338,30 @@ function update() {
   if (!ultiActive && !ultiReady && now - ultiLast > ultiCool) {
     ultiReady = true;
   }
-  let ultiMsg = (
-    currChar=='doge'?"F를 눌러 궁극기 [도지로켓] 사용 가능!"
-    :currChar=='giorno'?"F를 눌러 궁극기 [무효화] 사용 가능!"
-    :"F를 눌러 궁극기 [더 월드] 사용 가능!");
   document.getElementById('ulti').innerHTML =
     ultiActive
-      ? `<b>${currChar=='doge'?"도지로켓 가동중!!":currChar=='giorno'?"무효화 발동중!!":"더 월드 가동중!!"}</b>`
+      ? "<b>더 월드 가동중!!</b>"
       : ultiReady
-        ? ultiMsg
-        : `${currChar=='doge'?"도지로켓":"무효화"} 충전중... (${Math.ceil((ultiCool - (now-ultiLast))/1000)}초)`;
+        ? "F를 눌러 궁극기 [더 월드] 사용 가능!"
+        : `더 월드 충전중... (${Math.ceil((ultiCool - (now-ultiLast))/1000)}초)`;
   tick++;
   document.getElementById('score').innerText = `최고기록 : ${bestScore} / 포인트 : ${getPoint()}`;
 }
 function gameLoop() { update(); draw(); if(!gameOver) requestAnimationFrame(gameLoop);}
 window.addEventListener("keydown", function(e){
-  let k = e.code;
-  if(controlMode==='arrow') {
-    if(k === "ArrowLeft") player.movingLeft = true;
-    if(k === "ArrowRight") player.movingRight = true;
-  }
-  if(controlMode==='wasd') {
-    if(k === "KeyA") player.movingLeft = true;
-    if(k === "KeyD") player.movingRight = true;
-  }
-  if(k === "KeyF" && ultiReady && !ultiActive) {
+  if(e.code === "ArrowLeft") player.movingLeft = true;
+  if(e.code === "ArrowRight") player.movingRight = true;
+  if(e.code === "KeyF" && ultiReady && !ultiActive) {
     ultiActive = true;
     ultiLast = Date.now();
     soundPlayed = false;
-    if(currChar=='giorno') obstacles = [];
   }
 });
 window.addEventListener("keyup", function(e){
-  let k = e.code;
-  if(controlMode==='arrow') {
-    if(k === "ArrowLeft") player.movingLeft = false;
-    if(k === "ArrowRight") player.movingRight = false;
-  }
-  if(controlMode==='wasd') {
-    if(k === "KeyA") player.movingLeft = false;
-    if(k === "KeyD") player.movingRight = false;
-  }
+  if(e.code === "ArrowLeft") player.movingLeft = false;
+  if(e.code === "ArrowRight") player.movingRight = false;
 });
-function setupSettingUI() {
-  let vol = +getSetting('vol',70);
-  document.getElementById('vol-range').value = vol;
-  document.getElementById('vol-value').innerText = vol;
-  document.getElementById('vol-range').oninput = function() {
-    document.getElementById('vol-value').innerText = this.value;
-    setSetting('vol',this.value);
-    theWorldAudio.volume = this.value/100;
-    giornoAudio.volume = this.value/100;
-  };
-  let ctrl = getSetting('control','arrow');
-  document.getElementById('control-sel').value = ctrl;
-  document.getElementById('control-sel').onchange = function() {
-    setSetting('control',this.value);
-  };
-}
+// 최초 진입 시 로비로
 showLobby();
 </script>
 </body>

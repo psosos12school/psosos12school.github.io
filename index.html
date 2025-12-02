@@ -7,32 +7,80 @@
     canvas { background: #222; display: block; margin: 0 auto; }
     body { text-align: center; font-family: sans-serif; color: #fff; background: #333;}
     h2 { margin-top: 20px;}
-    #score, #gameover { margin: 12px 0; }
-    #ulti { margin-bottom: 10px; font-size: 18px;}
-    button { font-size: 20px; padding: 8px 24px; background: #409; color: #fff; border:none; border-radius:8px; cursor:pointer;}
+    #score, #ulti { margin: 12px 0; }
+    #gameoverbox {
+      position: absolute;
+      left: 0; top: 0; width: 100%; height: 100%;
+      display: flex; flex-direction:column;
+      align-items: center; justify-content:center;
+      pointer-events: auto;
+      z-index: 10;
+    }
+    #gameoverinner {
+      background: rgba(20,20,20,0.94);
+      border-radius: 20px;
+      box-shadow: 0 0 40px #222;
+      padding: 48px 48px 32px 48px;
+      min-width: 350px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #gameoverinner h1 {
+      margin: 0 0 8px 0;
+      font-size: 2.2em;
+      color: #ff0;
+    }
+    #gameoverinner .record {
+      font-size: 1.2em;
+      color: #ffd700;
+      margin-bottom: 20px;
+    }
+    #gameoverinner button {
+      font-size: 20px;
+      padding: 8px 32px;
+      background: #409;
+      color: #fff;
+      border: none;
+      border-radius:8px;
+      cursor:pointer;
+      margin-top:16px;
+    }
   </style>
 </head>
 <body>
   <h2>개고기 피하기 공장</h2>
   <div id="ulti"></div>
-  <canvas id="game" width="400" height="600"></canvas>
+  <div style="position:relative;width:400px;height:600px;margin:auto;">
+    <canvas id="game" width="400" height="600" style="z-index:1;"></canvas>
+    <div id="gameover"></div>
+    <!-- 중앙에 띄우는 오버레이 박스 -->
+    <div id="gameoverbox" style="display:none;"></div>
+  </div>
   <div id="score"></div>
-  <div id="gameover"></div>
-  <!-- 사운드 추가 -->
   <audio id="theworld-audio" src="더월드.mp3"></audio>
   <script>
-    // 이미지 로딩
     const dogeImg = new Image();
     dogeImg.src = "도지.png";
     const rocketImg = new Image();
     rocketImg.src = "개고기로켓.png";
-    // 사운드 객체
     const theWorldAudio = document.getElementById('theworld-audio');
 
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
-    // 플레이어 상태
+    // 최고기록(쿠키/localStorage)
+    function getBestScore() {
+      return Number(localStorage.getItem('bestScore')||'0');
+    }
+    function setBestScore(val) {
+      localStorage.setItem('bestScore', val+"");
+    }
+
+    let bestScore = getBestScore(); // 시작시 로딩
+    document.getElementById('score').innerText = `최고기록 : ${bestScore}`;
+
     const player = {
       x: canvas.width/2-30,
       y: canvas.height-80,
@@ -53,8 +101,6 @@
     let ultiDuration = 2000;
     let ultiActive = false;
     let ultiLast = 0;
-
-    // 궁극기 사운드 재생 체크
     let soundPlayed = false;
 
     let obstacles = [];
@@ -135,8 +181,13 @@
           let plx = player.x + player.hitbox.xOffset, ply = player.y + player.hitbox.yOffset, plw = player.hitbox.w, plh = player.hitbox.h;
           if (obx < plx + plw && obx + obw > plx && oby < ply + plh && oby + obh > ply) {
             gameOver = true;
-            document.getElementById('gameover').innerHTML =
-              `<h1>게임 오버! 점수: ${score}</h1><button onclick="window.location.reload()">다시하기</button>`;
+            // 최고기록 갱신
+            if(score > bestScore) {
+              bestScore = score;
+              setBestScore(score);
+            }
+            // 화면 중앙에 오버레이 띄우기
+            showGameOver();
           }
         }
       });
@@ -164,7 +215,7 @@
             : `더 월드 충전중... (${Math.ceil((ultiCool - (now-ultiLast))/1000)}초)`;
 
       tick++;
-      document.getElementById('score').innerText = `최고기록 : ${score}`;
+      document.getElementById('score').innerText = `최고기록 : ${bestScore}`;
     }
 
     function gameLoop() {
@@ -173,14 +224,26 @@
       if (!gameOver) requestAnimationFrame(gameLoop);
     }
 
-    // 키 이벤트: 좌우 + 궁극기
+    // 중앙 오버레이 박스 띄우기
+    function showGameOver() {
+      const box = document.getElementById('gameoverbox');
+      box.innerHTML = `
+        <div id="gameoverinner">
+          <h1>게임 오버!</h1>
+          <div class="record">점수: ${score}<br>최고기록: ${bestScore}</div>
+          <button onclick="window.location.reload()">다시하기</button>
+        </div>
+      `;
+      box.style.display = "flex";
+    }
+
     window.addEventListener("keydown", function(e){
       if(e.code === "ArrowLeft") player.movingLeft = true;
       if(e.code === "ArrowRight") player.movingRight = true;
       if(e.code === "KeyF" && ultiReady && !ultiActive) {
         ultiActive = true;
         ultiLast = Date.now();
-        soundPlayed = false; // 사운드 재생 트리거
+        soundPlayed = false;
       }
     });
     window.addEventListener("keyup", function(e){
@@ -195,6 +258,7 @@
         if (loadCount === 2) gameLoop();
       }
     });
+
   </script>
 </body>
 </html>

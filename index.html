@@ -60,17 +60,28 @@
   </div>
   <div id="score"></div>
   <audio id="theworld-audio" src="더월드.mp3"></audio>
+  <audio id="bgm-audio" src="브금.mp3" autoplay loop></audio>
   <script>
     const dogeImg = new Image();
     dogeImg.src = "도지.png";
     const rocketImg = new Image();
     rocketImg.src = "개고기로켓.png";
     const theWorldAudio = document.getElementById('theworld-audio');
+    const bgmAudio = document.getElementById('bgm-audio');
+
+    // bgm 자동 실행 (일부 브라우저에서 사용자가 조작하면 자동재생됨)
+    bgmAudio.volume = 0.6;
+    bgmAudio.loop = true;
+    bgmAudio.autoplay = true;
+    document.body.addEventListener('click', () => {
+      // 사용자가 한 번 클릭하면 브라우저의 오토플레이 정책 해제됨
+      if(bgmAudio.paused) bgmAudio.play();
+    });
 
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
 
-    // 최고기록(쿠키/localStorage) 2222
+    // 최고기록(쿠키/localStorage)
     function getBestScore() {
       return Number(localStorage.getItem('bestScore')||'0');
     }

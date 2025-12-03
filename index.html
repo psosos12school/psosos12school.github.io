@@ -398,7 +398,7 @@
       } else if (currentCharacter === 'steve') {
         document.getElementById('ulti').innerHTML =
           steveUltiActive
-            ? "<b>스티브 다이아 갑옷 장착! 다음 공격 1회 방어</b>"
+            ? "<b>보호 III</b>"
             : steveUltiReady
               ? "F를 눌러 스티브 궁극기 [다이아갑옷] 사용 가능!"
               : `광질중.. (${Math.ceil((steveUltiCool - (now-steveUltiLast))/1000)}초)`;
@@ -472,9 +472,9 @@
     // --- 캐릭터 구매/선택 UI 로직 (추가) ---
     document.getElementById('buySteveBtn').addEventListener('click', function(){
       const points = getPoints();
-      if (points >= 850) {
+      if (points >= 8) {
         // 차감 후 소유 처리
-        setPoints(points - 850);
+        setPoints(points - 8);
         setSteveOwned(true);
         alert('스티브를 구매했습니다!');
       } else {

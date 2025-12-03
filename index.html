@@ -232,7 +232,7 @@
 
     // 스티브 궁극기(추가)
     let steveUltiReady = true;
-    const steveUltiCool = 40000; // 40초
+    const steveUltiCool = 30000; // 40초
     let steveUltiActive = false;
     let steveUltiLast = 0;
     // 스티브의 '한 번 방어' 플래그는 steveUltiActive가 true일 때 사용됨
@@ -311,7 +311,7 @@
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.restore();
           ctx.font = "bold 30px sans-serif";
-          ctx.fillText("다이아 갑옷!", 110, 310);
+          ctx.fillText("보호 III", 110, 310);
         }
       }
     }
@@ -400,8 +400,8 @@
           steveUltiActive
             ? "<b>스티브 다이아 갑옷 장착! 다음 공격 1회 방어</b>"
             : steveUltiReady
-              ? "F를 눌러 스티브 궁극기 [다이아 갑옷] 사용 가능!"
-              : `스티브 궁극기 충전중... (${Math.ceil((steveUltiCool - (now-steveUltiLast))/1000)}초)`;
+              ? "F를 눌러 스티브 궁극기 [다이아갑옷] 사용 가능!"
+              : `광질중.. (${Math.ceil((steveUltiCool - (now-steveUltiLast))/1000)}초)`;
       }
 
       tick++;

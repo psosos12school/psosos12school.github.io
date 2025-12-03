@@ -7,7 +7,7 @@
     canvas { background: #222; display: block; margin: 0 auto; }
     body { text-align: center; font-family: sans-serif; color: #fff; background: #333;}
     h2 { margin-top: 20px;}
-    #score, #ulti { margin: 12px 0; }
+    #score, #ulti, #pointsDisplay, #charbox { margin: 12px 0; }
     #gameoverbox {
       position: absolute;
       left: 0; top: 0; width: 100%; height: 100%;
@@ -47,10 +47,59 @@
       cursor:pointer;
       margin-top:16px;
     }
+
+    /* 캐릭터 선택 박스 */
+    #charbox {
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:center;
+      margin-bottom:8px;
+    }
+    .charcard {
+      background: rgba(255,255,255,0.06);
+      padding:8px;
+      border-radius:8px;
+      min-width:140px;
+    }
+    .charcard button {
+      margin-top:8px;
+      padding:6px 10px;
+      border-radius:6px;
+      border:none;
+      cursor:pointer;
+      background:#2b6;
+      color:#001;
+      font-weight:bold;
+    }
+    .locked {
+      background:#555;
+      color:#ccc;
+    }
   </style>
 </head>
 <body>
   <h2>개고기 피하기 공장</h2>
+
+  <!-- 캐릭터 선택 및 포인트 UI (추가된 부분) -->
+  <div id="pointsDisplay">포인트: 0</div>
+  <div id="charbox">
+    <div class="charcard" id="dogeCard">
+      <div>도지 (기본)</div>
+      <img src="도지.png" alt="도지" style="width:100%;height:auto;max-width:90px;margin-top:6px;">
+      <div><button id="selectDogeBtn">선택</button></div>
+    </div>
+
+    <div class="charcard" id="steveCard">
+      <div>스티브</div>
+      <img src="스티브.png" alt="스티브" style="width:100%;height:auto;max-width:90px;margin-top:6px;">
+      <div id="steveControls">
+        <button id="buySteveBtn">구매 (850)</button>
+        <button id="selectSteveBtn" class="locked" disabled>선택</button>
+      </div>
+    </div>
+  </div>
+
   <div id="ulti"></div>
   <div style="position:relative;width:400px;height:600px;margin:auto;">
     <canvas id="game" width="400" height="600" style="z-index:1;"></canvas>
@@ -59,22 +108,34 @@
     <div id="gameoverbox" style="display:none;"></div>
   </div>
   <div id="score"></div>
+
+  <!-- 오디오 리소스 (추가된 타격 소리 포함) -->
   <audio id="theworld-audio" src="더월드.mp3"></audio>
   <audio id="bgm-audio" src="브금.mp3" autoplay loop></audio>
+  <audio id="hit-audio" src="타격.mp3"></audio>
+
   <script>
+    // 기존 이미지들
     const dogeImg = new Image();
     dogeImg.src = "도지.png";
     const rocketImg = new Image();
     rocketImg.src = "개고기로켓.png";
+
+    // 추가된 스티브 이미지(궁극기 시 다갑 이미지 포함)
+    const steveImg = new Image();
+    steveImg.src = "스티브.png";
+    const steveArmorImg = new Image();
+    steveArmorImg.src = "스티브다갑.png";
+
     const theWorldAudio = document.getElementById('theworld-audio');
     const bgmAudio = document.getElementById('bgm-audio');
+    const hitAudio = document.getElementById('hit-audio');
 
     // bgm 자동 실행 (일부 브라우저에서 사용자가 조작하면 자동재생됨)
     bgmAudio.volume = 0.6;
     bgmAudio.loop = true;
     bgmAudio.autoplay = true;
     document.body.addEventListener('click', () => {
-      // 사용자가 한 번 클릭하면 브라우저의 오토플레이 정책 해제됨
       if(bgmAudio.paused) bgmAudio.play();
     });
 
@@ -92,6 +153,61 @@
     let bestScore = getBestScore(); // 시작시 로딩
     document.getElementById('score').innerText = `최고기록 : ${bestScore}`;
 
+    // 포인트 관련 (추가)
+    function getPoints() {
+      return Number(localStorage.getItem('points')||'0');
+    }
+    function setPoints(val) {
+      localStorage.setItem('points', String(val));
+    }
+    function addPoints(n) {
+      const p = getPoints() + n;
+      setPoints(p);
+      updatePointsDisplay();
+      return p;
+    }
+    function updatePointsDisplay() {
+      document.getElementById('pointsDisplay').innerText = `포인트: ${getPoints()}`;
+    }
+    updatePointsDisplay();
+
+    // 스티브 소유 여부
+    function isSteveOwned() {
+      return localStorage.getItem('ownedSteve') === '1';
+    }
+    function setSteveOwned(val) {
+      localStorage.setItem('ownedSteve', val ? '1' : '0');
+      refreshSteveUI();
+    }
+
+    // 캐릭터 선택 상태
+    let currentCharacter = 'doge'; // 'doge' or 'steve'
+    function selectCharacter(name) {
+      currentCharacter = name;
+      refreshCharacterSelectionUI();
+    }
+
+    function refreshSteveUI() {
+      const buyBtn = document.getElementById('buySteveBtn');
+      const selectBtn = document.getElementById('selectSteveBtn');
+      if (isSteveOwned()) {
+        buyBtn.style.display = 'none';
+        selectBtn.disabled = false;
+        selectBtn.classList.remove('locked');
+      } else {
+        buyBtn.style.display = 'inline-block';
+        selectBtn.disabled = true;
+        selectBtn.classList.add('locked');
+      }
+    }
+    function refreshCharacterSelectionUI() {
+      // 시각적으로 선택된 캐릭터 강조 (간단히 버튼 텍스트)
+      document.getElementById('selectDogeBtn').innerText = currentCharacter === 'doge' ? '선택됨' : '선택';
+      const sBtn = document.getElementById('selectSteveBtn');
+      sBtn.innerText = currentCharacter === 'steve' ? '선택됨' : '선택';
+    }
+
+    // player 객체 (기존 코드에 추가 필드 없음)
     const player = {
       x: canvas.width/2-30,
       y: canvas.height-80,
@@ -106,13 +222,20 @@
       hitbox: { xOffset: 8, yOffset: 8, w: 44, h: 44 }
     };
 
-    // 궁극기(더 월드) 상태
+    // 기존 더 월드(도지) 상태 (원래 코드 유지)
     let ultiReady = true;
     let ultiCool = 50000; // 50초
     let ultiDuration = 2000;
     let ultiActive = false;
     let ultiLast = 0;
     let soundPlayed = false;
+
+    // 스티브 궁극기(추가)
+    let steveUltiReady = true;
+    const steveUltiCool = 40000; // 40초
+    let steveUltiActive = false;
+    let steveUltiLast = 0;
+    // 스티브의 '한 번 방어' 플래그는 steveUltiActive가 true일 때 사용됨
 
     let obstacles = [];
     let score = 0;
@@ -152,21 +275,44 @@
       obstacles.forEach(ob => {
         ctx.drawImage(rocketImg, ob.x, ob.y, ob.w, ob.h);
       });
-      ctx.drawImage(dogeImg, player.x, player.y, player.w, player.h);
+
+      // 플레이어 렌더링: 현재 선택된 캐릭터와 스티브 궁극기 시 다갑 처리
+      if (currentCharacter === 'steve') {
+        if (steveUltiActive) {
+          ctx.drawImage(steveArmorImg, player.x, player.y, player.w, player.h);
+        } else {
+          ctx.drawImage(steveImg, player.x, player.y, player.w, player.h);
+        }
+      } else {
+        // 도지 (기본)
+        ctx.drawImage(dogeImg, player.x, player.y, player.w, player.h);
+      }
 
       ctx.fillStyle = "#fff";
       ctx.font = "bold 25px sans-serif";
       ctx.fillText(`점수: ${score}`, 10, 35);
 
-      // 궁극기 표시 (더 월드)
-      if (ultiActive) {
-        ctx.save();
-        ctx.globalAlpha = 0.2;
-        ctx.fillStyle = "#40f";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.restore();
-        ctx.font = "bold 35px sans-serif";
-        ctx.fillText("더 월드!", 135, 310);
+      // 궁극기 표시 (도지 또는 스티브에 따라 다르게 보이게 함)
+      if (currentCharacter === 'doge') {
+        if (ultiActive) {
+          ctx.save();
+          ctx.globalAlpha = 0.2;
+          ctx.fillStyle = "#40f";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.restore();
+          ctx.font = "bold 35px sans-serif";
+          ctx.fillText("더 월드!", 135, 310);
+        }
+      } else if (currentCharacter === 'steve') {
+        if (steveUltiActive) {
+          ctx.save();
+          ctx.globalAlpha = 0.25;
+          ctx.fillStyle = "#0ff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.restore();
+          ctx.font = "bold 30px sans-serif";
+          ctx.fillText("다이아 갑옷!", 110, 310);
+        }
       }
     }
 
@@ -178,6 +324,7 @@
       if (!startTime) startTime = now;
       let sec = Math.floor((now - startTime) / 1000);
 
+      // 기존 도지용 장애물 생성 규칙 그대로 유지
       if (!ultiActive && tick % getObstacleInterval(sec) === 0) makeObstacle();
       updatePlayer();
 
@@ -191,19 +338,35 @@
           let obx = ob.x + ob.hitbox.xOffset, oby = ob.y + ob.hitbox.yOffset, obw = ob.hitbox.w, obh = ob.hitbox.h;
           let plx = player.x + player.hitbox.xOffset, ply = player.y + player.hitbox.yOffset, plw = player.hitbox.w, plh = player.hitbox.h;
           if (obx < plx + plw && obx + obw > plx && oby < ply + plh && oby + obh > ply) {
-            gameOver = true;
-            // 최고기록 갱신
-            if(score > bestScore) {
-              bestScore = score;
-              setBestScore(score);
+            // 충돌 처리: 스티브가 선택되어 있고 스티브 궁극기가 활성화되어 있다면 한 번 방어
+            if (currentCharacter === 'steve' && steveUltiActive) {
+              // 방어 성공: 음향 재생, 궁극기 소모, 해당 장애물 제거 (게임오버 X)
+              hitAudio.currentTime = 0;
+              hitAudio.play();
+              steveUltiActive = false;
+              steveUltiLast = Date.now();
+              steveUltiReady = false;
+              obstacles.splice(idx, 1);
+              // 방어 시엔 점수 증가 없음(원하면 변경 가능)
+            } else {
+              // 기존 그대로 게임오버 처리
+              gameOver = true;
+              // 최고기록 갱신
+              if(score > bestScore) {
+                bestScore = score;
+                setBestScore(score);
+              }
+              // 한 게임 종료 시 포인트 부여 (score / 10, 내림)
+              const gained = Math.floor(score / 10);
+              if (gained > 0) addPoints(gained);
+              // 화면 중앙에 오버레이 띄우기
+              showGameOver();
             }
-            // 화면 중앙에 오버레이 띄우기
-            showGameOver();
           }
         }
       });
 
-      // 궁극기 쿨/상태 표시
+      // 기존 도지 궁극기(더 월드) 처리 - 그대로 유지
       if (ultiActive && !soundPlayed) {
         theWorldAudio.currentTime = 0;
         theWorldAudio.play();
@@ -218,12 +381,28 @@
       if (!ultiActive && !ultiReady && now - ultiLast > ultiCool) {
         ultiReady = true;
       }
-      document.getElementById('ulti').innerHTML =
-        ultiActive
-          ? "<b>더 월드 가동중!!</b>"
-          : ultiReady
-            ? "F를 눌러 궁극기 [더 월드] 사용 가능!"
-            : `더 월드 충전중... (${Math.ceil((ultiCool - (now-ultiLast))/1000)}초)`;
+
+      // 스티브 궁극기 쿨다운 처리 (추가)
+      if (!steveUltiActive && !steveUltiReady && now - steveUltiLast > steveUltiCool) {
+        steveUltiReady = true;
+      }
+
+      // ulti 표시: 캐릭터에 따라 분기
+      if (currentCharacter === 'doge') {
+        document.getElementById('ulti').innerHTML =
+          ultiActive
+            ? "<b>더 월드 가동중!!</b>"
+            : ultiReady
+              ? "F를 눌러 궁극기 [더 월드] 사용 가능!"
+              : `더 월드 충전중... (${Math.ceil((ultiCool - (now-ultiLast))/1000)}초)`;
+      } else if (currentCharacter === 'steve') {
+        document.getElementById('ulti').innerHTML =
+          steveUltiActive
+            ? "<b>스티브 다이아 갑옷 장착! 다음 공격 1회 방어</b>"
+            : steveUltiReady
+              ? "F를 눌러 스티브 궁극기 [다이아 갑옷] 사용 가능!"
+              : `스티브 궁극기 충전중... (${Math.ceil((steveUltiCool - (now-steveUltiLast))/1000)}초)`;
+      }
 
       tick++;
       document.getElementById('score').innerText = `최고기록 : ${bestScore}`;
@@ -242,19 +421,33 @@
         <div id="gameoverinner">
           <h1>게임 오버!</h1>
           <div class="record">점수: ${score}<br>최고기록: ${bestScore}</div>
+          <div style="font-size:1em;color:#fff">획득 포인트: ${Math.floor(score/10)}</div>
           <button onclick="window.location.reload()">다시하기</button>
         </div>
       `;
       box.style.display = "flex";
     }
 
+    // 키 입력 처리: F키가 도지/스티브 별로 작동하도록 수정(추가)
     window.addEventListener("keydown", function(e){
       if(e.code === "ArrowLeft") player.movingLeft = true;
       if(e.code === "ArrowRight") player.movingRight = true;
-      if(e.code === "KeyF" && ultiReady && !ultiActive) {
-        ultiActive = true;
-        ultiLast = Date.now();
-        soundPlayed = false;
+      if(e.code === "KeyF") {
+        const now = Date.now();
+        if (currentCharacter === 'doge') {
+          if (ultiReady && !ultiActive) {
+            ultiActive = true;
+            ultiLast = now;
+            soundPlayed = false;
+          }
+        } else if (currentCharacter === 'steve') {
+          if (steveUltiReady && !steveUltiActive) {
+            steveUltiActive = true;
+            steveUltiLast = now;
+            steveUltiReady = false;
+            // (스티브 궁극기는 맞았을 때 소리 재생되므로 여기선 소리 재생 X)
+          }
+        }
       }
     });
     window.addEventListener("keyup", function(e){
@@ -262,14 +455,59 @@
       if(e.code === "ArrowRight") player.movingRight = false;
     });
 
+    // 이미지 로딩 완료 후 게임 시작(로딩 카운트에 스티브 리소스 추가)
     let loadCount = 0;
-    [dogeImg, rocketImg].forEach(img => {
+    [dogeImg, rocketImg, steveImg, steveArmorImg].forEach(img => {
       img.onload = () => {
         loadCount++;
-        if (loadCount === 2) gameLoop();
-      }
+        if (loadCount === 4) gameLoop();
+      };
+      // 에러가 나도 카운트 올려서 게임이 멈추지 않게 처리
+      img.onerror = () => {
+        loadCount++;
+        if (loadCount === 4) gameLoop();
+      };
     });
 
+    // --- 캐릭터 구매/선택 UI 로직 (추가) ---
+    document.getElementById('buySteveBtn').addEventListener('click', function(){
+      const points = getPoints();
+      if (points >= 850) {
+        // 차감 후 소유 처리
+        setPoints(points - 850);
+        setSteveOwned(true);
+        alert('스티브를 구매했습니다!');
+      } else {
+        alert('포인트가 부족합니다. 850포인트 필요.');
+      }
+    });
+    document.getElementById('selectSteveBtn').addEventListener('click', function(){
+      if (isSteveOwned()) {
+        selectCharacter('steve');
+      }
+    });
+    document.getElementById('selectDogeBtn').addEventListener('click', function(){
+      selectCharacter('doge');
+    });
+
+    // 페이지 로드 시 UI 초기화
+    function initUI() {
+      // 소유 정보가 없으면 기본 false
+      if (localStorage.getItem('ownedSteve') === null) {
+        setSteveOwned(false);
+      } else {
+        refreshSteveUI();
+      }
+      refreshCharacterSelectionUI();
+      updatePointsDisplay();
+    }
+    initUI();
+
+    // 게임이 시작되면(또는 재시작) 포인트 표시가 최신인지 보장
+    // (이미 updatePointsDisplay가 호출됨)
+
+    // 만약 사용자가 게임 도중 새로고침 없이 게임을 다시 시작하면
+    // 포인트는 게임오버 시에만 누적되므로 추가 조작 불필요.
   </script>
 </body>
 </html>

@@ -198,7 +198,7 @@
         buyBtn.style.display = 'inline-block';
         selectBtn.disabled = true;
         selectBtn.classList.add('locked');
-      }
+      }f
     }
     function refreshCharacterSelectionUI() {
       // 시각적으로 선택된 캐릭터 강조 (간단히 버튼 텍스트)
@@ -398,7 +398,7 @@
       } else if (currentCharacter === 'steve') {
         document.getElementById('ulti').innerHTML =
           steveUltiActive
-            ? "<b>보호 III</b>"
+            ? "<b></b>"
             : steveUltiReady
               ? "F를 눌러 스티브 궁극기 [다이아갑옷] 사용 가능!"
               : `광질중.. (${Math.ceil((steveUltiCool - (now-steveUltiLast))/1000)}초)`;

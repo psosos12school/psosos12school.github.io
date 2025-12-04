@@ -472,9 +472,9 @@
     // --- 캐릭터 구매/선택 UI 로직 (추가) ---
     document.getElementById('buySteveBtn').addEventListener('click', function(){
       const points = getPoints();
-      if (points >= 850) {
+      if (points >= 8) {
         // 차감 후 소유 처리
-        setPoints(points - 850);
+        setPoints(points - 8);
         setSteveOwned(true);
         alert('스티브를 구매했습니다!');
       } else {
